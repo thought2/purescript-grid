@@ -11,17 +11,19 @@ module Data.Grid
   , findEntry
   , fromArray
   , fromArrays
+  , fromArraysAdjusted
   , insert
   , insertSubgrid
   , insertSubgridCropped
   , isInSize
   , lookup
-  , moduloLookup
+  , lookupModulo
   , size
   , toArrays
   , toMap
   , toUnfoldable
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -148,8 +150,8 @@ empty = unsafeEmpty
 lookup :: forall a. Pos -> Grid a -> Maybe a
 lookup pos grid = Map.lookup pos $ getEntries grid
 
-moduloLookup :: forall a. Pos -> Grid a -> a
-moduloLookup (Pos pos) grid = lookup posSafe grid
+lookupModulo :: forall a. Pos -> Grid a -> a
+lookupModulo (Pos pos) grid = lookup posSafe grid
   # fromMaybe' (\_ -> unsafeCrashWith "Modulo lookup")
   where
   (Size siz) = getSize grid
@@ -199,6 +201,10 @@ fromArrays xs = do
   where
   pos = coordinatesFromSize siz
   siz = guessSize xs
+
+fromArraysAdjusted :: forall a. Size -> a -> Array (Array a) -> Grid a
+fromArraysAdjusted siz def xs =
+  fill siz (\pos -> lookup2d pos xs # fromMaybe def)
 
 fromArray :: forall a. Array a -> Grid a
 fromArray xs = UnsafeGrid siz mp
