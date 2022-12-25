@@ -34,17 +34,21 @@ import Data.Either as Either
 import Data.Foldable (class Foldable, foldMap, foldl, foldr)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndexDefaultL, foldlWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
+import Data.Generic.Rep (class Generic)
 import Data.Map (Map)
 import Data.Map as Map
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, fromMaybe')
-import Data.String as Str
-import Data.String.CodeUnits (fromCharArray)
-import Data.Traversable (class Traversable, sequence, sequenceDefault, traverse)
+import Data.Maybe (Maybe(..), fromMaybe, fromMaybe')
+import Data.Newtype (class Newtype, unwrap)
+import Data.Newtype as NT
+import Data.Show.Generic (genericShow)
+import Data.Traversable (class Traversable, sequenceDefault, traverse)
 import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 import Data.Tuple (Tuple(..))
 import Data.Unfoldable (class Unfoldable, unfoldr)
-import Linear.Vec2 (Vec2, getX, getY, vec2)
+import Linear.Vec2 (Vec2(..))
 import Linear.Vec2 (Vec2, vec2) as Exp
+import Linear.Vec2 as V2
+import Linear.Vec2 as Vec2
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
 type Vec = Vec2 Int
@@ -82,6 +86,8 @@ instance IsVec Pos where
 
 derive newtype instance Semiring Pos
 
+derive instance Newtype Size _
+
 derive instance Eq Size
 
 derive instance Eq Pos
@@ -114,21 +120,13 @@ instance FoldableWithIndex Pos Grid where
 --   traverseWithIndex f (UnsafeGrid size mp) = UnsafeGrid size <$> traverseWithIndex f mp
 
 instance Traversable Grid where
-  traverse f = unsafeOverEntriesM $ traverse f
+  traverse f (UnsafeGrid oldSize oldMap) =
+    UnsafeGrid oldSize <$> traverse f oldMap
   sequence = sequenceDefault
 
 instance TraversableWithIndex Pos Grid where
-  traverseWithIndex f = unsafeOverEntriesM $ traverseWithIndex f
-
---------------------------------------------------------------------------------
---- Unsafe Impl
---------------------------------------------------------------------------------
-
-unsafeOverEntries :: forall a b. (Map Pos a -> Map Pos b) -> Grid a -> Grid b
-unsafeOverEntries f (UnsafeGrid siz mp) = UnsafeGrid siz (f mp)
-
-unsafeOverEntriesM :: forall a b m. Functor m => (Map Pos a -> m (Map Pos b)) -> Grid a -> m (Grid b)
-unsafeOverEntriesM f (UnsafeGrid siz mp) = UnsafeGrid siz <$> (f mp)
+  traverseWithIndex f (UnsafeGrid oldSize oldMap) =
+    UnsafeGrid oldSize <$> (traverseWithIndex f oldMap)
 
 getSize :: forall a. Grid a -> Size
 getSize (UnsafeGrid siz _) = siz
@@ -136,41 +134,85 @@ getSize (UnsafeGrid siz _) = siz
 getEntries :: forall a. Grid a -> Map Pos a
 getEntries (UnsafeGrid _ mp) = mp
 
-unsafeFill :: forall a. Size -> (Pos -> a) -> Grid a
-unsafeFill siz f = UnsafeGrid siz $
-  positionsFromSize siz <#> mkEntry # Map.fromFoldable
+fill :: forall a. Size -> (Pos -> a) -> Grid a
+fill givenSize f = UnsafeGrid givenSize newMap
   where
+  newMap = positionsFromSize givenSize <#> mkEntry # Map.fromFoldable
   mkEntry k = Tuple k (f k)
 
-unsafeEmpty :: forall a. Grid a
-unsafeEmpty = UnsafeGrid (Size zero) Map.empty
-
-unsafeInsert :: forall a. Pos -> a -> Grid a -> Maybe (Grid a)
-unsafeInsert pos x grid | isInSize pos (getSize grid) =
-  Just $ unsafeOverEntries (Map.insert pos x) grid
-unsafeInsert _ _ _ = Nothing
-
---------------------------------------------------------------------------------
---- Safe Impl
---------------------------------------------------------------------------------
-
-fill :: forall a. Size -> (Pos -> a) -> Grid a
-fill = unsafeFill
-
 empty :: forall a. Grid a
-empty = unsafeEmpty
+empty = UnsafeGrid (Size zero) Map.empty
+
+insert :: forall a. Pos -> a -> Grid a -> Maybe (Grid a)
+insert pos x (UnsafeGrid oldSize oldMap) | isInSize pos oldSize =
+  Just $ UnsafeGrid oldSize newMap
+  where
+  newMap = Map.insert pos x oldMap
+insert _ _ _ = Nothing
+
+fromArrays :: forall a. Array (Array a) -> Either ErrorFromArrays (Grid a)
+fromArrays xs = ado
+  newMap <- positionsFromSize newSize # traverse mkEntry <#> Map.fromFoldable
+  in
+    UnsafeGrid newSize newMap
+  where
+  mkEntry pos = ado
+    value <- lookup2d pos xs # Either.note (ErrLineWrongLength { guessedSize: newSize, pos })
+    in Tuple pos value
+
+  newSize = guessSize xs
+
+fromArraysAdjusted :: forall a. a -> Array (Array a) -> Grid a
+fromArraysAdjusted def xs = UnsafeGrid newSize newMap
+  where
+  mkEntry pos = Tuple pos (lookup2d pos xs # fromMaybe def)
+  newSize = guessSize xs
+  newMap = positionsFromSize newSize <#> mkEntry # Map.fromFoldable
+
+fromArray :: forall a. Size -> a -> Array a -> Grid a
+fromArray givenSize@(Size (Vec2 w _)) def xs = UnsafeGrid givenSize newMap
+  where
+  newMap = positionsFromSize givenSize
+    <#> mkEntry
+    # Map.fromFoldable
+
+  mkEntry pos@(Pos (Vec2 x y)) =
+    Tuple pos $
+      Arr.index xs (y * w + x) # fromMaybe def
+
+toArrays :: forall a. Grid a -> Array (Array a)
+toArrays grid@(UnsafeGrid (Size (Vec2 w h)) _) =
+  Arr.range 0 (h - 1) <#> mkLine
+  where
+  mkLine y = Arr.range 0 (w - 1) <#> \x -> mkCell x y
+  mkCell x y = unsafePartial $ unsafeLookup (Pos $ Vec2 x y) grid
+
+rotateClockwise :: forall a. Grid a -> Grid a
+rotateClockwise grid@(UnsafeGrid oldSize _) =
+  UnsafeGrid newSize newMap
+  where
+  newSize = NT.over Size Vec2.swap oldSize
+  newMap =
+    positionsFromSize oldSize
+      <#> mkEntry
+      # Map.fromFoldable
+
+  maxY = (oldSize # unwrap # V2.getY) - 1
+
+  mkEntry pos@(Pos (Vec2 x y)) = Tuple
+    (Pos $ Vec2 (maxY - y) x)
+    (unsafePartial $ unsafeLookup pos grid)
 
 lookup :: forall a. Pos -> Grid a -> Maybe a
 lookup pos grid = Map.lookup pos $ getEntries grid
 
 lookupModulo :: forall a. Pos -> Grid a -> a
-lookupModulo (Pos pos) grid = lookup posSafe grid
-  # fromMaybe' (\_ -> unsafeCrashWith "Modulo lookup")
+lookupModulo (Pos (Vec2 x y)) grid = unsafePartial $ unsafeLookup posSafe grid
   where
-  (Size siz) = getSize grid
-  posSafe = Pos $ vec2
-    (mod (getX pos) (getX siz))
-    (mod (getY pos) (getY siz))
+  (Size (Vec2 w h)) = getSize grid
+  posSafe = Pos $ Vec2
+    (mod x w)
+    (mod y h)
 
 -- | Gets the positions of the grid in column first order 
 positions :: forall a. Grid a -> Array Pos
@@ -184,9 +226,6 @@ size = getSize
 
 findEntry :: forall a. (Tuple Pos a -> Boolean) -> Grid a -> Maybe (Tuple Pos a)
 findEntry f grid = toUnfoldable grid # Arr.find f
-
-insert :: forall a. Pos -> a -> Grid a -> Maybe (Grid a)
-insert = unsafeInsert
 
 attemptInsert :: forall a. Pos -> a -> Grid a -> Grid a
 attemptInsert pos x grid = insert pos x grid # fromMaybe grid
@@ -203,66 +242,16 @@ insertSubgridCropped vec src tgt = src
 
 data ErrorFromArrays = ErrLineWrongLength { guessedSize :: Size, pos :: Pos }
 
-fromArrays :: forall a. Array (Array a) -> Either ErrorFromArrays (Grid a)
-fromArrays xs = do
-  mp <- sequence $ pos <#> \p ->
-    map (Tuple p) (lookup2d p xs)
-      # Either.note (ErrLineWrongLength { guessedSize: siz, pos: p })
-  pure $ UnsafeGrid siz $ Map.fromFoldable mp
-  where
-  pos = positionsFromSize siz
-  siz = guessSize xs
+derive instance Generic ErrorFromArrays _
+
+derive instance Eq ErrorFromArrays
+
+instance Show ErrorFromArrays where
+  show = genericShow
 
 fromArraysAdjustedTo :: forall a. Size -> a -> Array (Array a) -> Grid a
 fromArraysAdjustedTo siz def xs =
   fill siz (\pos -> lookup2d pos xs # fromMaybe def)
-
-fromArraysAdjusted :: forall a. a -> Array (Array a) -> Grid a
-fromArraysAdjusted def xs = do
-  let
-    mp = pos <#> \p ->
-      Tuple p (lookup2d p xs # fromMaybe def)
-  UnsafeGrid siz $ Map.fromFoldable mp
-  where
-  pos = positionsFromSize siz
-  siz = guessSize xs
-
-fromArray :: forall a. Size -> a -> Array a -> Grid a
-fromArray siz def xs = UnsafeGrid siz mp
-  where
-  mp = positionsFromSize siz
-    <#> mkEntry
-    # Map.fromFoldable
-  countRow = getX (toVec siz)
-  mkEntry pos@(Pos vec) | x <- getX vec, y <- getY vec =
-    Tuple pos $
-      Arr.index xs (y * countRow + x) # fromMaybe def
-
-toArrays :: forall a. Grid a -> Array (Array a)
-toArrays (UnsafeGrid (Size siz) mp) =
-  Arr.range 0 (h - 1) <#> mkLine
-  where
-  w = getX siz
-  h = getY siz
-  mkLine y = Arr.range 0 (w - 1) <#> \x -> mkCell x y
-  mkCell x y = Map.lookup (Pos $ vec2 x y) mp # fromMaybe'
-    \_ -> unsafeCrashWith "Impossible lookup"
-
-rotateClockwise :: forall a. Grid a -> Grid a
-rotateClockwise grid = UnsafeGrid newSize newMap
-  where
-  newSize = let vec = toVec oldSize in Size $ vec2 (getY vec) (getX vec)
-  oldSize = getSize grid
-  newMap =
-    positionsFromSize oldSize
-      <#> mkEntry
-      # Map.fromFoldable
-
-  maxY = (oldSize # toVec # getY) - 1
-
-  mkEntry pos@(Pos vec) = Tuple (Pos $ vec2 (maxY - getY vec) (getX vec)) $
-    unsafePartial
-      (lookup pos grid # fromMaybe' (\_ -> unsafeCrashWith "impossible lookup"))
 
 --------------------------------------------------------------------------------
 --- Util
@@ -275,26 +264,29 @@ range' end = unfoldr go zero
   go i = Just (Tuple i (i + 1))
 
 positionsFromSize :: Size -> Array Pos
-positionsFromSize (Size siz) = ado
-  x <- range' (getX siz)
-  y <- range' (getY siz)
-  in Pos $ vec2 x y
+positionsFromSize (Size (Vec2 w h)) = ado
+  x <- range' w
+  y <- range' h
+  in Pos $ Vec2 x y
 
 isInSize :: Pos -> Size -> Boolean
-isInSize (Pos pos) (Size siz) =
-  inRange (getX pos) (getX siz) && inRange (getY pos) (getY siz)
-  where
-  inRange :: Int -> Int -> Boolean
-  inRange x w = 0 <= x && x < w
+isInSize (Pos (Vec2 x y)) (Size (Vec2 w h)) =
+  inRange x w && inRange y h
+
+inRange :: Int -> Int -> Boolean
+inRange x w = 0 <= x && x < w
 
 guessSize :: forall a. Array (Array a) -> Size
-guessSize xs = Size $ vec2 x y
+guessSize xs = Size $ Vec2 x y
   where
   x = Arr.length <<< fromMaybe [] <<< Arr.head $ xs
   y = Arr.length xs
 
 lookup2d :: forall a. Pos -> Array (Array a) -> Maybe a
-lookup2d (Pos vec) = index' (getY vec) >=> index' (getX vec)
+lookup2d (Pos (Vec2 x y)) = index' y >=> index' x
 
 index' :: forall a. Int -> Array a -> Maybe a
 index' = flip Arr.index
+
+unsafeLookup :: forall a. Partial => Pos -> Grid a -> a
+unsafeLookup pos grid = lookup pos grid # fromMaybe' (\_ -> unsafeCrashWith "impossible lookup")

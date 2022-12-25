@@ -2,12 +2,12 @@ module Test.Data.Grid where
 
 import Prelude
 
-import Data.Array as Arr
+import Data.Either (Either(..))
 import Data.Grid (Pos(..), Size(..), vec2)
 import Data.Grid as G
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
-import Data.Tuple.Nested (type (/\), (/\))
+import Data.Tuple.Nested ((/\))
 import Linear.Vec2 (getX, getY)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
@@ -17,9 +17,8 @@ spec =
   describe "Data.Grid" do
     describe "fill" do
       it "works for a simple example" do
-        do
-          G.fill (Size $ vec2 2 3)
-            (\(Pos vec) -> show (getX vec) <> "-" <> show (getY vec))
+        G.fill (Size $ vec2 2 3)
+          (\(Pos vec) -> show (getX vec) <> "-" <> show (getY vec))
           `shouldEqual`
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
@@ -31,8 +30,7 @@ spec =
       it "creates an empty Grid" do
         G.empty
           `shouldEqual`
-            G.fromArraysAdjusted ""
-              []
+            G.fromArraysAdjusted "" []
 
     describe "lookup" do
       it "works for a simple example" do
@@ -143,7 +141,7 @@ spec =
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
               ]
-          `shouldEqual` do
+          `shouldEqual`
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "ABC" ]
@@ -152,19 +150,18 @@ spec =
 
     describe "insertSubgrid" do
       it "works for a simple example" do
-        do
-          G.insertSubgrid (Pos $ vec2 1 1)
-            do
-              G.fromArraysAdjusted ""
-                [ [ "AAA", "BBB" ]
-                , [ "CCC", "DDD" ]
-                ]
-            do
-              G.fromArraysAdjusted ""
-                [ [ "0-0", "1-0", "2-0" ]
-                , [ "0-1", "1-1", "2-1" ]
-                , [ "0-2", "1-2", "2-2" ]
-                ]
+        G.insertSubgrid (Pos $ vec2 1 1)
+          do
+            G.fromArraysAdjusted ""
+              [ [ "AAA", "BBB" ]
+              , [ "CCC", "DDD" ]
+              ]
+          do
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0", "2-0" ]
+              , [ "0-1", "1-1", "2-1" ]
+              , [ "0-2", "1-2", "2-2" ]
+              ]
           `shouldEqual` do
             Just $ G.fromArraysAdjusted ""
               [ [ "0-0", "1-0", "2-0" ]
@@ -174,22 +171,91 @@ spec =
 
     describe "insertSubgridCropped" do
       it "works for a simple example" do
-        do
-          G.insertSubgridCropped (Pos $ vec2 2 1)
-            do
-              G.fromArraysAdjusted ""
-                [ [ "AAA", "BBB" ]
-                , [ "CCC", "DDD" ]
-                ]
-            do
-              G.fromArraysAdjusted ""
-                [ [ "0-0", "1-0", "2-0" ]
-                , [ "0-1", "1-1", "2-1" ]
-                , [ "0-2", "1-2", "2-2" ]
-                ]
-          `shouldEqual` do
+        G.insertSubgridCropped (Pos $ vec2 2 1)
+          do
+            G.fromArraysAdjusted ""
+              [ [ "AAA", "BBB" ]
+              , [ "CCC", "DDD" ]
+              ]
+          do
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0", "2-0" ]
+              , [ "0-1", "1-1", "2-1" ]
+              , [ "0-2", "1-2", "2-2" ]
+              ]
+          `shouldEqual`
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0", "2-0" ]
               , [ "0-1", "1-1", "AAA" ]
               , [ "0-2", "1-2", "CCC" ]
+              ]
+
+    describe "fromArraysAdjustedTo" do
+      it "works for a simple example" do
+        G.fromArraysAdjustedTo (Size $ vec2 2 4) "AAA"
+          [ [ "0-0", "1-0" ]
+          , [ "0-1" ]
+          , [ "0-2", "1-2", "2-2" ]
+          ]
+          `shouldEqual`
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "AAA" ]
+              , [ "0-2", "1-2" ]
+              , [ "AAA", "AAA" ]
+              ]
+
+    describe "fromArraysAdjusted" do
+      it "exists" do
+        G.fromArraysAdjusted ""
+          [ [ "0-0", "1-0" ]
+          , [ "0-1", "1-1" ]
+          , [ "0-2", "1-2" ]
+          ]
+          `shouldEqual`
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "1-1" ]
+              , [ "0-2", "1-2" ]
+              ]
+
+    describe "fromArray" do
+      it "works for a simple example" do
+        G.fromArray (Size $ vec2 2 3) ""
+          [ "0-0", "1-0", "0-1", "1-1", "0-2", "1-2" ]
+          `shouldEqual`
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "1-1" ]
+              , [ "0-2", "1-2" ]
+              ]
+
+    describe "toArrays" do
+      it "works for a simple example" do
+        do
+          G.toArrays $
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "1-1" ]
+              , [ "0-2", "1-2" ]
+              ]
+          `shouldEqual`
+            [ [ "0-0", "1-0" ]
+            , [ "0-1", "1-1" ]
+            , [ "0-2", "1-2" ]
+            ]
+
+    describe "rotateClockwise" do
+      it "works for a simple example" do
+        do
+          G.rotateClockwise $
+            G.fromArraysAdjusted ""
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "1-1" ]
+              , [ "0-2", "1-2" ]
+              ]
+          `shouldEqual`
+            G.fromArraysAdjusted ""
+              [ [ "0-2", "0-1", "0-0" ]
+              , [ "1-2", "1-1", "1-0" ]
               ]
