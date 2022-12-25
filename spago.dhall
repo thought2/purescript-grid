@@ -1,6 +1,21 @@
 { name = "grid"
 , dependencies =
-  [ "console", "effect", "linear", "ordered-collections", "prelude", "strings" ]
+  [ "aff"
+  , "arrays"
+  , "console"
+  , "effect"
+  , "either"
+  , "foldable-traversable"
+  , "linear"
+  , "maybe"
+  , "ordered-collections"
+  , "partial"
+  , "prelude"
+  , "spec"
+  , "strings"
+  , "tuples"
+  , "unfoldable"
+  ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
