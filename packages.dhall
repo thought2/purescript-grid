@@ -3,17 +3,16 @@ let upstream =
         sha256:e462fb4d932e4bbc522cb563a71d312d6514f97050125d1a3f95cc3a2df3bffb
 
 in  upstream
-  with linear =
+  with vectors =
       { dependencies =
-      [ "arrays"
-      , "console"
+      [ "console"
       , "effect"
       , "foldable-traversable"
       , "prelude"
       , "profunctor-lenses"
       ]
       , repo =
-          "https://github.com/thought2/purescript-linear.git"
+          "https://github.com/thought2/purescript-vectors.git"
       , version =
-          "main"
+          "v2.0.1"
       }

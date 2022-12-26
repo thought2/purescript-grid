@@ -2,13 +2,11 @@ module Test.Data.Grid where
 
 import Prelude
 
-import Data.Either (Either(..))
-import Data.Grid (Pos(..), Size(..), vec2)
+import Data.Grid (Pos(..), Size(..), Vec(..))
 import Data.Grid as G
 import Data.Maybe (Maybe(..))
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Linear.Vec2 (getX, getY)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (shouldEqual)
 
@@ -17,8 +15,8 @@ spec =
   describe "Data.Grid" do
     describe "fill" do
       it "works for a simple example" do
-        G.fill (Size $ vec2 2 3)
-          (\(Pos vec) -> show (getX vec) <> "-" <> show (getY vec))
+        G.fill (Size $ Vec 2 3)
+          (\(Pos (Vec x y)) -> show x <> "-" <> show y)
           `shouldEqual`
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
@@ -32,10 +30,10 @@ spec =
           `shouldEqual`
             G.fromArraysAdjusted "" []
 
-    describe "lookup" do
+    describe "getCell" do
       it "works for a simple example" do
         do
-          G.lookup (Pos $ vec2 1 2) $
+          G.getCell (Pos $ Vec 1 2) $
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
@@ -44,10 +42,10 @@ spec =
           `shouldEqual`
             Just "1-2"
 
-    describe "lookupModulo" do
+    describe "getCellModulo" do
       it "works for a simple example" do
         do
-          G.lookupModulo (Pos $ vec2 2 3) $
+          G.getCellModulo (Pos $ Vec 2 3) $
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
@@ -66,12 +64,12 @@ spec =
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual`
-            [ Pos $ vec2 0 0
-            , Pos $ vec2 0 1
-            , Pos $ vec2 0 2
-            , Pos $ vec2 1 0
-            , Pos $ vec2 1 1
-            , Pos $ vec2 1 2
+            [ Pos $ Vec 0 0
+            , Pos $ Vec 0 1
+            , Pos $ Vec 0 2
+            , Pos $ Vec 1 0
+            , Pos $ Vec 1 1
+            , Pos $ Vec 1 2
             ]
 
     describe "toUnfoldable" do
@@ -84,12 +82,12 @@ spec =
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual`
-            [ (Pos $ vec2 0 0) /\ "0-0"
-            , (Pos $ vec2 0 1) /\ "0-1"
-            , (Pos $ vec2 0 2) /\ "0-2"
-            , (Pos $ vec2 1 0) /\ "1-0"
-            , (Pos $ vec2 1 1) /\ "1-1"
-            , (Pos $ vec2 1 2) /\ "1-2"
+            [ (Pos $ Vec 0 0) /\ "0-0"
+            , (Pos $ Vec 0 1) /\ "0-1"
+            , (Pos $ Vec 0 2) /\ "0-2"
+            , (Pos $ Vec 1 0) /\ "1-0"
+            , (Pos $ Vec 1 1) /\ "1-1"
+            , (Pos $ Vec 1 2) /\ "1-2"
             ]
 
     describe "size" do
@@ -102,7 +100,7 @@ spec =
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual`
-            (Size $ vec2 2 3)
+            (Size $ Vec 2 3)
 
     describe "findEntry" do
       it "works for a simple example" do
@@ -114,12 +112,12 @@ spec =
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual` do
-            Just $ (Pos $ vec2 1 1) /\ "1-1"
+            Just $ (Pos $ Vec 1 1) /\ "1-1"
 
-    describe "insert" do
+    describe "setCell" do
       it "works for a simple example" do
         do
-          G.insert (Pos $ vec2 1 1) "ABC" $
+          G.setCell (Pos $ Vec 1 1) "ABC" $
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
@@ -132,10 +130,10 @@ spec =
               , [ "0-2", "1-2" ]
               ]
 
-    describe "attemptInsert" do
+    describe "trySetCell" do
       it "works for a simple example" do
         do
-          G.attemptInsert (Pos $ vec2 1 1) "ABC" $
+          G.trySetCell (Pos $ Vec 1 1) "ABC" $
             G.fromArraysAdjusted ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
@@ -148,9 +146,9 @@ spec =
               , [ "0-2", "1-2" ]
               ]
 
-    describe "insertSubgrid" do
+    describe "setGrid" do
       it "works for a simple example" do
-        G.insertSubgrid (Pos $ vec2 1 1)
+        G.setGrid (Pos $ Vec 1 1)
           do
             G.fromArraysAdjusted ""
               [ [ "AAA", "BBB" ]
@@ -169,9 +167,9 @@ spec =
               , [ "0-2", "CCC", "DDD" ]
               ]
 
-    describe "insertSubgridCropped" do
+    describe "setGridCropped" do
       it "works for a simple example" do
-        G.insertSubgridCropped (Pos $ vec2 2 1)
+        G.setGridCropped (Pos $ Vec 2 1)
           do
             G.fromArraysAdjusted ""
               [ [ "AAA", "BBB" ]
@@ -192,7 +190,7 @@ spec =
 
     describe "fromArraysAdjustedTo" do
       it "works for a simple example" do
-        G.fromArraysAdjustedTo (Size $ vec2 2 4) "AAA"
+        G.fromArraysAdjustedTo (Size $ Vec 2 4) "AAA"
           [ [ "0-0", "1-0" ]
           , [ "0-1" ]
           , [ "0-2", "1-2", "2-2" ]
@@ -221,7 +219,7 @@ spec =
 
     describe "fromArray" do
       it "works for a simple example" do
-        G.fromFlatArray (Size $ vec2 2 3) ""
+        G.fromFlatArray (Size $ Vec 2 3) ""
           [ "0-0", "1-0", "0-1", "1-1", "0-2", "1-2" ]
           `shouldEqual`
             G.fromArraysAdjusted ""

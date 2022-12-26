@@ -6,9 +6,7 @@
   , "effect"
   , "either"
   , "foldable-traversable"
-  , "linear"
   , "maybe"
-  , "naturals"
   , "newtype"
   , "ordered-collections"
   , "partial"
@@ -18,6 +16,7 @@
   , "tuples"
   , "unfoldable"
   , "unsafe-coerce"
+  , "vectors"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
