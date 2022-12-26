@@ -1,7 +1,7 @@
 module Data.CharGrid
   ( CharGrid
   , fromString
-  , fromStringAdjustedTo
+  , fromStringFitTo
   , toString
   ) where
 
@@ -24,9 +24,9 @@ toString = Grid.toArrays >>> map fromCharArray >>> Str.joinWith "\n"
 fromString :: String -> Either ErrorFromArrays CharGrid
 fromString = toArray2d >>> Grid.fromArrays
 
-fromStringAdjustedTo :: Size -> Char -> String -> CharGrid
-fromStringAdjustedTo siz def = toArray2d
-  >>> Grid.fromArraysAdjustedTo siz def
+fromStringFitTo :: Size -> Char -> String -> CharGrid
+fromStringFitTo siz def = toArray2d
+  >>> Grid.fromArraysFitTo siz def
 
 trimNewlines :: String -> String
 trimNewlines =

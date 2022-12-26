@@ -5,22 +5,21 @@
 -- |   - [Pos](#t:Pos)
 -- |   - [Size](#t:Size)
 -- |
--- | - Errors
--- |   - [ErrorFromArrays](#t:ErrorFromArrays)
--- |
 -- | - Constructors
 -- |   - [fill](#v:fill)
 -- |   - [empty](#v:empty)
+-- |   - [ErrorFromArrays](#t:ErrorFromArrays)
 -- |   - [fromArrays](#v:fromArrays)
--- |   - [fromArraysAdjusted](#v:fromArraysAdjusted)
+-- |   - fromArraysClip
+-- |   - [fromArraysFit](#v:fromArraysFit)
+-- |   - [fromArraysFitTo](#v:fromArraysFitTo)
 -- |   - [fromFlatArray](#v:fromFlatArray)
--- |   - [fromArraysAdjustedTo](#v:fromArraysAdjustedTo)
 -- |   - singleton
--- |   - arrayToRowVector
--- |   - arrayToColumnVector
+-- |   - arrayToOneRowGrid
+-- |   - arrayToOneColGrid
 -- |   - fromFoldable
 -- |   - genGrid
--- |   - genGridOfSize
+-- |   - genGridSized
 -- |
 -- | - Destructors
 -- |   - [toArrays](#v:toArrays)
@@ -32,7 +31,7 @@
 -- |   - [positions](#v:positions)
 -- |   - getGrid
 -- |   - getGridModulo
--- |   - getGridCropped
+-- |   - getGridClip
 -- |
 -- | - Grid Modifiers
 -- |   - [rotateClockwise](#v:rotateClockwise)
@@ -50,15 +49,15 @@
 -- |   - appendY
 -- |   - appendX
 -- |   - resize
--- |   - resizeAdjusted
+-- |   - resizeFit
 -- |
 -- | - SubGrid Modifiers
 -- |   - [setGrid](#v:setGrid)
--- |   - [setGridCropped](#v:setGridCropped)
+-- |   - [setGridClip](#v:setGridClip)
 -- |   - modifyGrid
 -- |   - setGridModulo
 -- |   - modifyGridModulo
--- |   - modifyGridCropped
+-- |   - modifyGridClip
 -- |   - trySetGrid
 -- |   - tryModifyGrid
 -- |
@@ -75,14 +74,13 @@ module Data.Grid
   , Pos(..)
   , Size(..)
 
-  , ErrorFromArrays(..)
-
   , fill
   , empty
+  , ErrorFromArrays(..)
   , fromArrays
-  , fromArraysAdjusted
+  , fromArraysFit
   , fromFlatArray
-  , fromArraysAdjustedTo
+  , fromArraysFitTo
 
   , toArrays
   , toUnfoldable
@@ -98,7 +96,7 @@ module Data.Grid
   , trySetCell
 
   , setGrid
-  , setGridCropped
+  , setGridClip
 
   , module Exp
   ) where
@@ -113,19 +111,22 @@ import Data.Foldable (class Foldable, foldMap, foldl, foldr)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndexDefaultL, foldlWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
 import Data.Generic.Rep (class Generic)
+import Data.List as List
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, fromMaybe')
 import Data.Newtype (class Newtype, unwrap)
 import Data.Newtype as NT
 import Data.Show.Generic (genericShow)
+import Data.String as Str
+import Data.String.CodeUnits (fromCharArray)
 import Data.Traversable (class Traversable, sequenceDefault, traverse)
 import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), snd)
 import Data.Unfoldable (class Unfoldable, unfoldr)
 import Data.Vector2 (Vec(..))
-import Data.Vector2 as Vec
 import Data.Vector2 (Vec(..)) as Exp
+import Data.Vector2 as Vec
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -133,80 +134,172 @@ import Unsafe.Coerce (unsafeCoerce)
 --- Types
 --------------------------------------------------------------------------------
 
-newtype Size = Size (Vec Int)
-
-newtype Pos = Pos (Vec Int)
+-- | 2D grid with variable size
 
 data Grid a = UnsafeGrid Size (Map Pos a)
 
-derive newtype instance Semiring Pos
-
-derive instance Newtype Size _
-
-derive instance Eq Size
-
-derive instance Eq Pos
-
-derive newtype instance Ord Pos
+-- | Equality of each cell
+-- |
+-- | ```
+-- | > gridA = fromArraysFit 0 [[1,2],[3,4]]
+-- | > gridB = fromArraysFit 0 [[1,2],[3,4]]  
+-- | > gridA == gridB
+-- | true
+-- | ```
 
 derive instance (Eq a) => Eq (Grid a)
 
+-- | Maps over each cell
+-- |
+-- | ```
+-- | > map (add 10) $ fromArraysFit 0 [[1,2],[3,4]]
+-- | [[11,12],[13,14]]
+-- | ```
+
 derive instance Functor Grid
+
+-- | Maps over each cell with position as index
+-- |
+-- | ```
+-- | > grid = fromArraysFit " " [["A","B"],["C","D"]]
+-- | > mapFn (Pos (Vec x y)) cell = show x <> show y <> cell
+-- | > mapWithIndex mapFn grid
+-- | [["00A","10B"],["01C","11D"]]
+-- | ```
 
 instance FunctorWithIndex Pos Grid where
   mapWithIndex f (UnsafeGrid siz mp) = UnsafeGrid siz $ mapWithIndex f mp
 
-derive newtype instance Show Size
-
-derive newtype instance Show Pos
+-- | Show instance intended for debugging.
+-- |
+-- | ```
+-- | > logShow $ fromArraysFit 0 [[1,2],[3,4]]
+-- | [[1,2],[3,4]]
+-- | ```
 
 instance Show a => Show (Grid a) where
-  show grid = show
-    { type: "Grid"
-    , size: getSize grid
-    , entries: Map.toUnfoldable $ getEntries grid :: Array _
-    }
+  show = toArrays >>> show
+
+-- | Fold over each cell.
+-- |
+-- | ```
+-- | > grid = fromArraysFit 0 [[1,2],[3,4]]
+-- | > foldr add 100 grid
+-- | 110
+-- | ```
 
 instance Foldable Grid where
   foldr f x = getEntries >>> foldr f x
   foldl f x = getEntries >>> foldl f x
   foldMap f = getEntries >>> foldMap f
 
+-- | Fold over each cell with positions as index.
+-- |
+-- | ```
+-- | > grid = fromArraysFit 0 [[1,2],[3,4]]
+-- | > foldFn (Pos (Vec x y)) n acc = x + y + n + acc
+-- | > foldrWithIndex foldFn 10 grid
+-- | 24
+-- | ```
+
 instance FoldableWithIndex Pos Grid where
   foldrWithIndex f x = getEntries >>> foldrWithIndex f x
   foldlWithIndex f x = getEntries >>> foldlWithIndex f x
   foldMapWithIndex = foldMapWithIndexDefaultL
+
+-- | ```
+-- | > grid = fromArraysFit Nothing [[Just 1,Just 2],[Just 3,Just 4]]
+-- | > sequence grid
+-- | (Just [[1,2],[3,4]])
+-- | ```
 
 instance Traversable Grid where
   traverse f (UnsafeGrid oldSize oldMap) =
     UnsafeGrid oldSize <$> traverse f oldMap
   sequence = sequenceDefault
 
+-- | ```
+-- | > grid = fromArraysFit 0 [[1,2],[3,4]]
+-- | > fn (Pos (Vec x _)) _ = Just x 
+-- | > traverseWithIndex fn grid
+-- | (Just [[0,1],[0,1]])
+-- | ```
+
 instance TraversableWithIndex Pos Grid where
   traverseWithIndex f (UnsafeGrid oldSize oldMap) =
     UnsafeGrid oldSize <$> (traverseWithIndex f oldMap)
 
+-- | Position in a 2D Plane
 
---------------------------------------------------------------------------------
---- Errors
---------------------------------------------------------------------------------
+newtype Pos
+  -- | Creates a `Pos` from a vector
+  -- |
+  -- | ```
+  -- | > Pos (Vec 2 1)
+  -- | ```
+  = Pos (Vec Int)
 
-data ErrorFromArrays = ErrLineWrongLength { guessedSize :: Size, pos :: Pos }
+-- | Equal if components in vector are equal
+-- |
+-- | ```
+-- | > Pos (Vec 2 1) == Pos (Vec 2 1)
+-- | true
+-- | ```
 
-derive instance Generic ErrorFromArrays _
+derive instance Eq Pos
 
-derive instance Eq ErrorFromArrays
+derive newtype instance Ord Pos
 
-instance Show ErrorFromArrays where
+derive newtype instance Semiring Pos
+
+instance Show Pos where
   show = genericShow
 
+derive instance Generic Pos _
 
+-- | Size in a 2D Plane
+
+newtype Size
+  -- | Creates a `Size` from a vector
+  -- |
+  -- | ```
+  -- | > Size (Vec 3 4)
+  -- | ```
+  = Size (Vec Int)
+
+-- | Equal if components in vector are equal.
+-- |
+-- | ```
+-- | > Size (Vec 2 1) == Size (Vec 2 1)
+-- | true
+-- | ```
+
+derive instance Eq Size
+
+-- | Show instance intended for debugging.
+-- |
+-- | ```
+-- | > show (Size (Vec 2 1)) == "(Size (Vec 2 1))"
+-- | true
+-- | ```
+
+instance Show Size where
+  show = genericShow
+
+derive instance Newtype Size _
+
+derive instance Generic Size _
 
 --------------------------------------------------------------------------------
 --- Constructors
 --------------------------------------------------------------------------------
 
 -- | Fills a grid with a function based on the position
+-- |
+-- | ```
+-- | > fill (Size $ Vec 2 2) (\(Pos (Vec x y)) -> show x <> "-" <> show y)
+-- | [["0-0","1-0"],["0-1","1-1"]]
+-- | ```
 
 fill :: forall a. Size -> (Pos -> a) -> Grid a
 fill unsafeSize f = UnsafeGrid givenSize newMap
@@ -215,8 +308,25 @@ fill unsafeSize f = UnsafeGrid givenSize newMap
   newMap = positionsFromSize givenSize <#> mkEntry # Map.fromFoldable
   mkEntry k = Tuple k (f k)
 
+-- | An empty grid of size `0|0`
+-- |
+-- | ```
+-- | > size empty
+-- | (Size (Vec 0 0))
+-- | ```
+
 empty :: forall a. Grid a
 empty = UnsafeGrid (Size zero) Map.empty
+
+-- | Error that can happen inside the `fromArrays` function
+data ErrorFromArrays = ErrLineWrongLength { guessedSize :: Size, pos :: Pos }
+
+derive instance Generic ErrorFromArrays _
+
+derive instance Eq ErrorFromArrays
+
+instance Show ErrorFromArrays where
+  show = genericShow
 
 fromArrays :: forall a. Array (Array a) -> Either ErrorFromArrays (Grid a)
 fromArrays xs = ado
@@ -230,12 +340,16 @@ fromArrays xs = ado
 
   newSize = guessSize xs
 
-fromArraysAdjusted :: forall a. a -> Array (Array a) -> Grid a
-fromArraysAdjusted def xs = UnsafeGrid newSize newMap
+fromArraysFit :: forall a. a -> Array (Array a) -> Grid a
+fromArraysFit def xs = UnsafeGrid newSize newMap
   where
   mkEntry pos = Tuple pos (lookup2d pos xs # fromMaybe def)
   newSize = guessSize xs
   newMap = positionsFromSize newSize <#> mkEntry # Map.fromFoldable
+
+fromArraysFitTo :: forall a. Size -> a -> Array (Array a) -> Grid a
+fromArraysFitTo siz def xs =
+  fill siz (\pos -> lookup2d pos xs # fromMaybe def)
 
 fromFlatArray :: forall a. Size -> a -> Array a -> Grid a
 fromFlatArray unsafeSize def xs =
@@ -249,10 +363,6 @@ fromFlatArray unsafeSize def xs =
   mkEntry pos@(Pos (Vec x y)) =
     Tuple pos $
       Arr.index xs (y * w + x) # fromMaybe def
-
-fromArraysAdjustedTo :: forall a. Size -> a -> Array (Array a) -> Grid a
-fromArraysAdjustedTo siz def xs =
-  fill siz (\pos -> lookup2d pos xs # fromMaybe def)
 
 --------------------------------------------------------------------------------
 --- Destructors
@@ -274,7 +384,6 @@ size = getSize
 findEntry :: forall a. (Tuple Pos a -> Boolean) -> Grid a -> Maybe (Tuple Pos a)
 findEntry f grid = toUnfoldable grid # Arr.find f
 
-
 getCell :: forall a. Pos -> Grid a -> Maybe a
 getCell pos grid = Map.lookup pos $ getEntries grid
 
@@ -285,8 +394,6 @@ getCellModulo (Pos (Vec x y)) grid = unsafePartial $ unsafeLookup posSafe grid
   posSafe = Pos $ Vec
     (mod x w)
     (mod y h)
-
-
 
 -- | Gets the positions of the grid in column first order 
 positions :: forall a. Grid a -> Array Pos
@@ -321,8 +428,8 @@ setGrid vec src tgt = src
   # toUnfoldable
   # Arr.foldM (\grid (Tuple k v) -> setCell (vec + k) v grid) tgt
 
-setGridCropped :: forall a. Pos -> Grid a -> Grid a -> Grid a
-setGridCropped vec src tgt = src
+setGridClip :: forall a. Pos -> Grid a -> Grid a -> Grid a
+setGridClip vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> fromMaybe grid $ setCell (vec + k) v grid) tgt
 
@@ -387,7 +494,6 @@ getSize (UnsafeGrid siz _) = siz
 getEntries :: forall a. Grid a -> Map Pos a
 getEntries (UnsafeGrid _ mp) = mp
 
-
 --------------------------------------------------------------------------------
 --- Planned API
 --------------------------------------------------------------------------------
@@ -411,9 +517,9 @@ getEntries (UnsafeGrid _ mp) = mp
 -- getGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
 -- modifyGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
 
--- setGridCropped :: forall a. Pos -> Grid a -> Grid a
--- getGridCropped :: forall a. Pos -> Size -> Grid a -> Grid a
--- modifyGridCropped :: Pos -> Size -> (a -> a) -> Grid a
+-- setGridClip :: forall a. Pos -> Grid a -> Grid a
+-- getGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
+-- modifyGridClip :: Pos -> Size -> (a -> a) -> Grid a
 
 -- trySetGrid :: forall a. Pos -> Grid a -> Grid a
 -- tryModifyGrid :: Pos -> Size -> (a -> a) -> Grid a
@@ -441,10 +547,37 @@ getEntries (UnsafeGrid _ mp) = mp
 -- mirrorX :: Grid a -> Grid a
 
 -- genGrid :: Gen a -> Gen (Grid a)
--- genGridOfSize :: Size -> Gen a -> Gen (Grid a)
+-- genGridSized :: Size -> Gen a -> Gen (Grid a)
 
 -- appendY :: Grid a -> Grid a -> Grid a   
 -- appendX :: Grid a -> Grid a -> Grid a
 
 -- resize :: Size -> Grid a -> Maybe (Grid a)
--- resizeAdjusted :: Size -> a -> Grid a -> Grid a
+-- resizeFit :: Size -> a -> Grid a -> Grid a
+
+---
+
+values :: forall a. Grid a -> Array a
+values (UnsafeGrid _ gridMap) = gridMap
+  # Map.values
+  # List.toUnfoldable
+
+printStringGrid :: Grid String -> String
+printStringGrid grid = grid
+  # toArrays
+  <#> mkLine
+  # Str.joinWith "\n"
+  where
+  mkLine = map (padRight (maxLength + 1) ' ') >>> Str.joinWith ""
+  maxLength = grid
+    # values
+    <#> Str.length
+    # Arr.sort
+    # Arr.head
+    # fromMaybe 0
+
+padRight :: Int -> Char -> String -> String
+padRight n char str = str <> buffer
+  where
+  buffer = Arr.replicate len char # fromCharArray
+  len = n - Str.length str
