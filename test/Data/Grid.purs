@@ -221,7 +221,7 @@ spec =
 
     describe "fromArray" do
       it "works for a simple example" do
-        G.fromArray (Size $ vec2 2 3) ""
+        G.fromFlatArray (Size $ vec2 2 3) ""
           [ "0-0", "1-0", "0-1", "1-1", "0-2", "1-2" ]
           `shouldEqual`
             G.fromArraysAdjusted ""

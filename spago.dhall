@@ -8,6 +8,8 @@
   , "foldable-traversable"
   , "linear"
   , "maybe"
+  , "naturals"
+  , "newtype"
   , "ordered-collections"
   , "partial"
   , "prelude"
@@ -15,6 +17,7 @@
   , "strings"
   , "tuples"
   , "unfoldable"
+  , "unsafe-coerce"
   ]
 , packages = ./packages.dhall
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
