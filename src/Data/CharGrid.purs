@@ -1,9 +1,10 @@
 module Data.CharGrid
-  ( CharGrid
-  , fromString
-  , fromStringFitTo
-  , toString
-  ) where
+  -- ( CharGrid
+  -- , fromString
+  -- , fromStringFitTo
+  -- , toString
+  -- ) 
+  where
 
 import Prelude
 
@@ -16,26 +17,26 @@ import Data.String.Regex (replace) as Reg
 import Data.String.Regex.Flags (noFlags) as Reg
 import Data.String.Regex.Unsafe (unsafeRegex) as Reg
 
-type CharGrid = Grid Char
+-- type CharGrid = Grid Char
 
-toString :: CharGrid -> String
-toString = Grid.toArrays >>> map fromCharArray >>> Str.joinWith "\n"
+-- toString :: CharGrid -> String
+-- toString = Grid.toArrays >>> map fromCharArray >>> Str.joinWith "\n"
 
-fromString :: String -> Either ErrorFromArrays CharGrid
-fromString = toArray2d >>> Grid.fromArrays
+-- fromString :: String -> Either ErrorFromArrays CharGrid
+-- fromString = toArray2d >>> Grid.fromArrays
 
-fromStringFitTo :: Size -> Char -> String -> CharGrid
-fromStringFitTo siz def = toArray2d
-  >>> Grid.fromArraysFitTo siz def
+-- fromStringFitTo :: Size -> Char -> String -> CharGrid
+-- fromStringFitTo siz def = toArray2d
+--   >>> Grid.fromArraysFitTo siz def
 
-trimNewlines :: String -> String
-trimNewlines =
-  Reg.replace leadingNewlines "" >>> Reg.replace trailingNewlines ""
-  where
-  leadingNewlines = Reg.unsafeRegex "^\\n*" Reg.noFlags
-  trailingNewlines = Reg.unsafeRegex "\\n*$" Reg.noFlags
+-- trimNewlines :: String -> String
+-- trimNewlines =
+--   Reg.replace leadingNewlines "" >>> Reg.replace trailingNewlines ""
+--   where
+--   leadingNewlines = Reg.unsafeRegex "^\\n*" Reg.noFlags
+--   trailingNewlines = Reg.unsafeRegex "\\n*$" Reg.noFlags
 
-toArray2d :: String -> Array (Array Char)
-toArray2d = trimNewlines
-  >>> Str.split (Str.Pattern "\n")
-  >>> map toCharArray
+-- toArray2d :: String -> Array (Array Char)
+-- toArray2d = trimNewlines
+--   >>> Str.split (Str.Pattern "\n")
+--   >>> map toCharArray
