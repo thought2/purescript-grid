@@ -34,28 +34,45 @@ spec =
           pure unit
 
     describe "Constructors" do
+      describe "empty" do
+        it "creates an empty Grid" do
+          G.empty
+            `shouldEqual`
+              G.fromArraysExtend "" []
+
+      describe "singleton" do
+        it "creates an singleton Grid" do
+          G.singleton 'A'
+            `shouldEqual`
+              G.fromArraysExtend ' ' [ [ 'A' ] ]
+
       describe "fill" do
         it "works for a simple example" do
           G.fill (Size $ Vec 2 3)
             (\(Pos (Vec x y)) -> show x <> "-" <> show y)
             `shouldEqual`
-              G.fromArraysFit ""
+              G.fromArraysExtend ""
                 [ [ "0-0", "1-0" ]
                 , [ "0-1", "1-1" ]
                 , [ "0-2", "1-2" ]
                 ]
 
-      describe "empty" do
-        it "creates an empty Grid" do
-          G.empty
+      describe "fromFlatArrayFitTo" do
+        it "works for a simple example" do
+          G.fromFlatArrayFitTo (Size $ Vec 2 3) ""
+            [ "0-0", "1-0", "0-1", "1-1", "0-2", "1-2" ]
             `shouldEqual`
-              G.fromArraysFit "" []
+              G.fromArraysExtend ""
+                [ [ "0-0", "1-0" ]
+                , [ "0-1", "1-1" ]
+                , [ "0-2", "1-2" ]
+                ]
 
     describe "getCell" do
       it "works for a simple example" do
         do
           G.getCell (Pos $ Vec 1 2) $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -67,7 +84,7 @@ spec =
       it "works for a simple example" do
         do
           G.getCellModulo (Pos $ Vec 2 3) $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -79,7 +96,7 @@ spec =
       it "works for a simple example" do
         do
           G.positions $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -97,7 +114,7 @@ spec =
       it "works for a simple example" do
         do
           G.toUnfoldable $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -115,7 +132,7 @@ spec =
       it "works for a simple example" do
         do
           G.size $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -127,7 +144,7 @@ spec =
       it "works for a simple example" do
         do
           G.findEntry (\(Tuple _ v) -> v == "1-1") $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -139,13 +156,13 @@ spec =
       it "works for a simple example" do
         do
           G.setCell (Pos $ Vec 1 1) "ABC" $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual` do
-            Just $ G.fromArraysFit ""
+            Just $ G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "ABC" ]
               , [ "0-2", "1-2" ]
@@ -155,13 +172,13 @@ spec =
       it "works for a simple example" do
         do
           G.trySetCell (Pos $ Vec 1 1) "ABC" $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual`
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "ABC" ]
               , [ "0-2", "1-2" ]
@@ -171,18 +188,18 @@ spec =
       it "works for a simple example" do
         G.setGrid (Pos $ Vec 1 1)
           do
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "AAA", "BBB" ]
               , [ "CCC", "DDD" ]
               ]
           do
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0", "2-0" ]
               , [ "0-1", "1-1", "2-1" ]
               , [ "0-2", "1-2", "2-2" ]
               ]
           `shouldEqual` do
-            Just $ G.fromArraysFit ""
+            Just $ G.fromArraysExtend ""
               [ [ "0-0", "1-0", "2-0" ]
               , [ "0-1", "AAA", "BBB" ]
               , [ "0-2", "CCC", "DDD" ]
@@ -192,18 +209,18 @@ spec =
       it "works for a simple example" do
         G.setGridClip (Pos $ Vec 2 1)
           do
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "AAA", "BBB" ]
               , [ "CCC", "DDD" ]
               ]
           do
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0", "2-0" ]
               , [ "0-1", "1-1", "2-1" ]
               , [ "0-2", "1-2", "2-2" ]
               ]
           `shouldEqual`
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0", "2-0" ]
               , [ "0-1", "1-1", "AAA" ]
               , [ "0-2", "1-2", "CCC" ]
@@ -217,33 +234,22 @@ spec =
           , [ "0-2", "1-2", "2-2" ]
           ]
           `shouldEqual`
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "AAA" ]
               , [ "0-2", "1-2" ]
               , [ "AAA", "AAA" ]
               ]
 
-    describe "fromArraysFit" do
+    describe "fromArraysExtend" do
       it "exists" do
-        G.fromArraysFit ""
+        G.fromArraysExtend ""
           [ [ "0-0", "1-0" ]
           , [ "0-1", "1-1" ]
           , [ "0-2", "1-2" ]
           ]
           `shouldEqual`
-            G.fromArraysFit ""
-              [ [ "0-0", "1-0" ]
-              , [ "0-1", "1-1" ]
-              , [ "0-2", "1-2" ]
-              ]
-
-    describe "fromFlatArray" do
-      it "works for a simple example" do
-        G.fromFlatArray (Size $ Vec 2 3) ""
-          [ "0-0", "1-0", "0-1", "1-1", "0-2", "1-2" ]
-          `shouldEqual`
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -253,7 +259,7 @@ spec =
       it "works for a simple example" do
         do
           G.toArrays $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
@@ -268,13 +274,13 @@ spec =
       it "works for a simple example" do
         do
           G.rotateClockwise $
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]
               ]
           `shouldEqual`
-            G.fromArraysFit ""
+            G.fromArraysExtend ""
               [ [ "0-2", "0-1", "0-0" ]
               , [ "1-2", "1-1", "1-0" ]
               ]
