@@ -9,24 +9,16 @@
 -- |   - [empty](#v:empty)
 -- |   - [singleton](#v:singleton)
 -- |   - [fill](#v:fill)
--- |   - fromArrays
+-- |   - [fromArrays](#v:fromArrays)
+-- |   - [fromArraysConform](#v:fromArraysConform)
+-- |   - [fromArraysPartial](#v:fromArraysPartial)
+-- |   - [fromFoldable](#v:fromFoldable)
 
+-- |   - fromArray
+-- |   - fromArrayConform
 -- |   - fromArrayAsRow
 -- |   - fromArrayAsColumn
 
--- |   - [fromArray](#v:fromArray)
--- |   - [fromArrayClipY](#v:fromArrayClipY)
--- |   - fromArrayClip
--- |   - fromArrayExtend
--- |   - fromArrayFitTo
--- |   - [ErrorFromArrays](#t:ErrorFromArrays)
--- |   - [fromArrays](#v:fromArrays)
--- |   - [fromArraysPartial](#v:fromArraysPartial)
--- |   - fromArraysClip
--- |   - [fromArraysExtend](#v:fromArraysExtend)
--- |   - [fromArraysFitTo](#v:fromArraysFitTo)
-
--- |   - fromFoldable
 -- |   - genGrid
 -- |   - genGridSized
 -- |
@@ -87,6 +79,9 @@ module Data.Grid
   , fill
   , findEntry
   , fromArrays
+  , fromArraysConform
+  , fromArraysPartial
+  , fromFoldable
   , getCell
   , getCellModulo
   , module Exp
@@ -109,7 +104,7 @@ import Data.Array as Arr
 import Data.Array.NonEmpty (fromArray, fromFoldable)
 import Data.Either (Either(..), fromRight')
 import Data.Either as Either
-import Data.Foldable (class Foldable, fold, foldMap, foldl, foldr, intercalate)
+import Data.Foldable (class Foldable, fold, foldMap, foldl, foldr, intercalate, traverse_)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndexDefaultL, foldlWithIndex, foldrWithIndex, traverseWithIndex_)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
 import Data.Generic.Rep (class Generic)
@@ -334,18 +329,8 @@ fromArrays unsafeSize xs = ado
   where
   newSize@(Size (Vec width height)) = normalizeSize unsafeSize
 
-  checkLinesM = do
-    traverseWithIndex_ checkLineM xs
-    if Arr.length xs == height then
-      pure unit
-    else
-      Nothing
-
-  checkLineM ix xs' =
-    if Arr.length xs' == width then
-      pure unit
-    else
-      Nothing
+  checkLinesM =
+    guard (array2dMaxSize xs == newSize)
 
   newMapM = positionsFromSize newSize
     # traverse mkEntryM
@@ -355,86 +340,66 @@ fromArrays unsafeSize xs = ado
     value <- lookup2d pos xs
     in Tuple pos value
 
--- fromArrayFitTo :: forall a. Size -> a -> Array a -> Grid a
--- fromArrayFitTo unsafeSize def xs =
---   UnsafeGrid givenSize newMap
---   where
---   givenSize@(Size (Vec w _)) = normalizeSize unsafeSize
---   newMap = positionsFromSize givenSize
---     <#> mkEntry
---     # Map.fromFoldable
-
---   mkEntry pos@(Pos (Vec x y)) =
---     Tuple pos $
---       Arr.index xs (y * w + x) # fromMaybe def
-
--- | Probably the shortest way to create a Grid. This width is given, the height
--- | is calculated. If the lengh of the Array is not `width * height` the rest
--- | id clipped away. 
+-- | Creates a Grid from a nested Array.
+-- | The height is determined by the length of the outer Array.
+-- | The width by the shortest length of the inner Arrays.
+-- | With this rules there can exist a Grid for every input.
 -- |
 -- | ```
--- | > fromArrayClipY 2 [1,2,3,4]
+-- | > fromArraysConform [[1,2],[3,4]]
+-- | (Just (fromArraysPartial [[1,2],[3,4]]))
+-- | ```
+
+fromArraysConform :: forall a. Array (Array a) -> Grid a
+fromArraysConform xs = UnsafeGrid newSize newMap
+  where
+  width = xs <#> Arr.length # Arr.sort # Arr.head # fromMaybe 0
+  height = Arr.length xs
+  newSize = normalizeSize $ Size $ Vec width height
+
+  newMap = positionsFromSize newSize
+    <#> mkEntry
+    # Map.fromFoldable
+
+  mkEntry pos@(Pos (Vec _ y)) =
+    let
+      value = unsafePartial $ unsafeLookup2d "fromArraysConform" pos xs
+    in
+      Tuple pos value
+
+-- | Creates a Grid from a nested Array.
+-- | If the inner Arrays differ in length an exception is thrown.
+-- | Thus the Partial constraint.
+-- |
+-- | ```
+-- | > fromArraysPartial [[1,2],[3,4]]
 -- | (fromArraysPartial [[1,2],[3,4]])
 -- | ```
 
--- fromArrayClipY :: forall a. Int -> Array a -> Grid a
--- fromArrayClipY unsafeWidth xs = UnsafeGrid newSize newMap
---   where
---   width = normalizeInt unsafeWidth
---   height = Arr.length xs / width
---   newSize = Size (Vec width height)
+fromArraysPartial :: forall a. Partial => Array (Array a) -> Grid a
+fromArraysPartial xs = case fromArrays newSize xs of
+  Just x -> x
+  Nothing -> unsafeCrashWith "Arrays have irregular shape"
+  where
+  newSize = array2dMaxSize xs
 
---   newMap = positionsFromSize newSize
---     <#> mkEntry
---     # Map.fromFoldable
-
---   mkEntry pos@(Pos (Vec x y)) =
---     Tuple pos
---       (unsafePartial $ Arr.unsafeIndex xs (y * width + x))
-
--- | Creates a Grid from nested Arrays. Width is determined by the length of the
--- | first Array. If the Arrays differ in size an Error is reported in an
--- | Either.
+-- | Creates a Grid from a Size and a Foldable containing entries for each cell.
 -- |
 -- | ```
--- | > fromArrays [[1,2],[3,4]]
--- | (Right (fromArraysPartial [[1,2],[3,4]]))
+-- | > entries = [(Pos $ Vec 0 0) /\ 'A', (Pos $ Vec 0 1) /\ 'B']
+-- | > fromFoldable (Size $ Vec 1 1) entries
+-- | (Just (fromArraysPartial [['A'],['B']]))
 -- | ```
--- fromArrays :: forall a. Array (Array a) -> Either ErrorFromArrays (Grid a)
--- fromArrays xs = ado
---   newMap <- positionsFromSize newSize # traverse mkEntry <#> Map.fromFoldable
---   in
---     UnsafeGrid newSize newMap
---   where
---   mkEntry pos = ado
---     value <- lookup2d pos xs # Either.note (ErrLineWrongLength { deducedSize: newSize, pos })
---     in Tuple pos value
 
---   newSize = deduceSize xs
-
--- | Creates a Grid from nested Arrays. Width is determined by the length of the
--- | first Array. If the Arrays differ in size an Error is thrown. Thus the
--- | `Partial` constraint which needs to be eliminated via `unsafePartial`.
--- |
--- | ```
--- | > unsafePartial $ fromArraysPartial [[1,2],[3,4]]
--- | (fromArraysPartial [[1,2],[3,4]])
--- | ```
--- fromArraysPartial :: forall a. Partial => Array (Array a) -> Grid a
--- fromArraysPartial xs = case fromArrays xs of
---   Left err -> unsafeCrashWith $ printErrorFromArrays err
---   Right ok -> ok
-
--- fromArraysExtend :: forall a. a -> Array (Array a) -> Grid a
--- fromArraysExtend def xs = UnsafeGrid newSize newMap
---   where
---   mkEntry pos = Tuple pos (lookup2d pos xs # fromMaybe def)
---   newSize = deduceSize xs
---   newMap = positionsFromSize newSize <#> mkEntry # Map.fromFoldable
-
--- fromArraysFitTo :: forall a. Size -> a -> Array (Array a) -> Grid a
--- fromArraysFitTo siz def xs =
---   fill siz (\pos -> lookup2d pos xs # fromMaybe def)
+fromFoldable :: forall a f. Foldable f => Size -> f (Tuple Pos a) -> Maybe (Grid a)
+fromFoldable unsafeSize xs = ado
+  checkPositions
+  in UnsafeGrid newSize newMap
+  where
+  newSize = normalizeSize unsafeSize
+  newMap = Map.fromFoldable xs
+  checkPositions = positionsFromSize newSize
+    # traverse_ (\pos -> void $ Map.lookup pos newMap)
 
 --------------------------------------------------------------------------------
 --- Destructors
@@ -608,6 +573,13 @@ printVec (Vec x y) = fold [ "(", show x, "|", show y, ")" ]
 
 spaced :: String -> String
 spaced x = " " <> x <> " "
+
+array2dMaxSize :: forall a. Array (Array a) -> Size
+array2dMaxSize xs = normalizeSize $ newSize
+  where
+  newSize = Size $ Vec width height
+  width = xs <#> Arr.length # Arr.sort # Arr.last # fromMaybe 0
+  height = Arr.length xs
 
 --------------------------------------------------------------------------------
 --- Planned API
