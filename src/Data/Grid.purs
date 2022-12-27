@@ -7,7 +7,7 @@
 -- |
 -- | - Constructors
 -- |   - [empty](#v:empty)
--- |   - singleton
+-- |   - [singleton](#v:singleton)
 -- |   - [fill](#v:fill)
 -- |   - fromArrayAsRow
 -- |   - fromArrayAsColumn 
@@ -33,9 +33,9 @@
 -- |   - [getCell](#v:getCell)
 -- |   - [getCellModulo](#v:getCellModulo)
 -- |   - [positions](#v:positions)
--- |   - getGrid
--- |   - getGridModulo
--- |   - getGridClip
+-- |   - getSubGrid
+-- |   - getSubGridModulo
+-- |   - getSubGridClip
 -- |
 -- | - Grid Modifiers
 -- |   - [rotateClockwise](#v:rotateClockwise)
@@ -56,14 +56,14 @@
 -- |   - resizeFit
 -- |
 -- | - SubGrid Modifiers
--- |   - [setGrid](#v:setGrid)
--- |   - [setGridClip](#v:setGridClip)
--- |   - modifyGrid
--- |   - setGridModulo
--- |   - modifyGridModulo
--- |   - modifyGridClip
--- |   - trySetGrid
--- |   - tryModifyGrid
+-- |   - [setSubGrid](#v:setSubGrid)
+-- |   - [setSubGridClip](#v:setSubGridClip)
+-- |   - modifySubGrid
+-- |   - setSubGridModulo
+-- |   - modifySubGridModulo
+-- |   - modifySubGridClip
+-- |   - trySetSubGrid
+-- |   - tryModifySubGrid
 -- |
 -- | - Cell Modifiers
 -- |   - [setCell](#v:setCell) 
@@ -101,8 +101,8 @@ module Data.Grid
   , setCell
   , trySetCell
 
-  , setGrid
-  , setGridClip
+  , setSubGrid
+  , setSubGridClip
 
   , module Exp
   ) where
@@ -432,13 +432,13 @@ rotateClockwise grid@(UnsafeGrid oldSize _) =
 --- SubGrid Modifiers
 --------------------------------------------------------------------------------
 
-setGrid :: forall a. Pos -> Grid a -> Grid a -> Maybe (Grid a)
-setGrid vec src tgt = src
+setSubGrid :: forall a. Pos -> Grid a -> Grid a -> Maybe (Grid a)
+setSubGrid vec src tgt = src
   # toUnfoldable
   # Arr.foldM (\grid (Tuple k v) -> setCell (vec + k) v grid) tgt
 
-setGridClip :: forall a. Pos -> Grid a -> Grid a -> Grid a
-setGridClip vec src tgt = src
+setSubGridClip :: forall a. Pos -> Grid a -> Grid a -> Grid a
+setSubGridClip vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> fromMaybe grid $ setCell (vec + k) v grid) tgt
 
@@ -518,20 +518,20 @@ getEntries (UnsafeGrid _ mp) = mp
 -- trySetCell :: forall a. Pos -> a -> Grid a -> Grid a
 -- tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
 
--- setGrid :: forall a. Pos -> Grid a -> Maybe (Grid a)
--- getGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
--- modifyGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
+-- setSubGrid :: forall a. Pos -> Grid a -> Maybe (Grid a)
+-- getSubGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
+-- modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
 
--- setGridModulo :: forall a. Pos -> Grid a -> Grid a
--- getGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
--- modifyGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
+-- setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
+-- getSubGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
+-- modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
 
--- setGridClip :: forall a. Pos -> Grid a -> Grid a
--- getGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
--- modifyGridClip :: Pos -> Size -> (a -> a) -> Grid a
+-- setSubGridClip :: forall a. Pos -> Grid a -> Grid a
+-- getSubGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
+-- modifySubGridClip :: Pos -> Size -> (a -> a) -> Grid a
 
--- trySetGrid :: forall a. Pos -> Grid a -> Grid a
--- tryModifyGrid :: Pos -> Size -> (a -> a) -> Grid a
+-- trySetSubGrid :: forall a. Pos -> Grid a -> Grid a
+-- tryModifySubGrid :: Pos -> Size -> (a -> a) -> Grid a
 
 -- zipApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
 -- zip :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c

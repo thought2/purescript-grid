@@ -184,9 +184,9 @@ spec =
               , [ "0-2", "1-2" ]
               ]
 
-    describe "setGrid" do
+    describe "setSubGrid" do
       it "works for a simple example" do
-        G.setGrid (Pos $ Vec 1 1)
+        G.setSubGrid (Pos $ Vec 1 1)
           do
             G.fromArraysExtend ""
               [ [ "AAA", "BBB" ]
@@ -205,9 +205,9 @@ spec =
               , [ "0-2", "CCC", "DDD" ]
               ]
 
-    describe "setGridClip" do
+    describe "setSubGridClip" do
       it "works for a simple example" do
-        G.setGridClip (Pos $ Vec 2 1)
+        G.setSubGridClip (Pos $ Vec 2 1)
           do
             G.fromArraysExtend ""
               [ [ "AAA", "BBB" ]
