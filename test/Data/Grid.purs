@@ -323,7 +323,22 @@ spec =
                 , [ "0-2", "1-2" ]
                 ]
 
-    describe "Debug Tools" do
+    describe "Pretty Printing" do
+      describe "printGrid" do
+        it "works for a simple example" do
+          do
+            G.printGrid $
+              G.fromArraysConform
+                [ [ "bird", "dog" ]
+                , [ "cat", "horse" ]
+                , [ "monkey", "giraffe" ]
+                ]
+            `shouldEqual` do
+              Str.joinWith "\n"
+                [ "\"bird\"   \"dog\"    "
+                , "\"cat\"    \"horse\"  "
+                , "\"monkey\" \"giraffe\""
+                ]
       describe "printStringGrid" do
         it "works for a simple example" do
           do

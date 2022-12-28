@@ -80,7 +80,8 @@
 -- |   - modifyCellModulo
 -- |   - tryModifyCell
 -- |
--- | - Debug Tools
+-- | - Pretty Printing
+-- |   - [printGrid](#v:printGrid)
 -- |   - [printStringGrid](#v:printStringGrid)
 
 --------------------------------------------------------------------------------
@@ -123,7 +124,8 @@ module Data.Grid
   , setCell
   , trySetCell
 
-  -- Debug Tools
+  -- Pretty Printing
+  , printGrid
   , printStringGrid
 
   , module Exp
@@ -616,8 +618,41 @@ trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 -- TODO: tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
 
 --------------------------------------------------------------------------------
---- Debug Tools
+--- Pretty Printing
 --------------------------------------------------------------------------------
+
+-- | ```
+-- | grid = G.fromArraysConform
+-- |   [ [ "bird", "dog" ]
+-- |   , [ "cat", "horse" ]
+-- |   , [ "monkey", "giraffe" ]
+-- |   ]
+-- | ```
+-- | ---
+-- | ```
+-- | > printGrid grid
+-- | "bird"   "dog"
+-- | "cat"    "horse"
+-- | "monkey" "giraffe"
+-- | ```
+
+printGrid :: forall a. Show a => Grid a -> String
+printGrid = map show >>> printStringGrid
+
+-- | ```
+-- | grid = G.fromArraysConform
+-- |   [ [ "bird", "dog" ]
+-- |   , [ "cat", "horse" ]
+-- |   , [ "monkey", "giraffe" ]
+-- |   ]
+-- | ```
+-- | ---
+-- | ```
+-- | > printStringGrid grid
+-- | bird   dog
+-- | cat    horse
+-- | monkey giraffe
+-- | ```
 
 printStringGrid :: Grid String -> String
 printStringGrid grid = grid
