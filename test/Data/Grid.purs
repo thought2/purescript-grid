@@ -78,7 +78,7 @@ spec =
             ]
             `shouldEqual`
               do
-                unsafePartial $ G.fromArraysPartial
+                unsafePartial $ G.fromArraysPartial (Size $ Vec 2 3)
                   [ [ "0-0", "1-0" ]
                   , [ "0-1", "1-1" ]
                   , [ "0-2", "1-2" ]
@@ -87,7 +87,7 @@ spec =
       describe "fromArraysPartial" do
         it "works for a simple example" do
           unsafePartial $
-            G.fromArraysPartial
+            G.fromArraysPartial (Size $ Vec 2 3)
               [ [ "0-0", "1-0" ]
               , [ "0-1", "1-1" ]
               , [ "0-2", "1-2" ]

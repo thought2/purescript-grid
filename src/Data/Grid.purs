@@ -181,7 +181,7 @@ derive instance (Eq a) => Eq (Grid a)
 -- |
 -- | ```
 -- | > map (add 10) $ fromArraysConform [[1,2],[3,4]]
--- | (fromArraysPartial [[11,12],[13,14]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [[11,12],[13,14]])
 -- | ```
 
 derive instance Functor Grid
@@ -192,7 +192,7 @@ derive instance Functor Grid
 -- | > grid = fromArraysConform [["A","B"],["C","D"]]
 -- | > mapFn (Pos (Vec x y)) cell = show x <> show y <> cell
 -- | > mapWithIndex mapFn grid
--- | (fromArraysPartial [["00A","10B"],["01C","11D"]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [["00A","10B"],["01C","11D"]])
 -- | ```
 
 instance FunctorWithIndex Pos Grid where
@@ -202,11 +202,19 @@ instance FunctorWithIndex Pos Grid where
 -- |
 -- | ```
 -- | > logShow $ fromArraysConform [[1,2],[3,4]]
--- | (fromArraysPartial [[1,2],[3,4]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [[1,2],[3,4]])
 -- | ```
 
 instance Show a => Show (Grid a) where
-  show grid = fold [ "(fromArraysPartial", " ", show $ toArrays grid, ")" ]
+  show grid = fold
+    [ "("
+    , "fromArraysPartial"
+    , " "
+    , show $ size grid
+    , " "
+    , show $ toArrays grid
+    , ")"
+    ]
 
 -- | Fold over each cell.
 -- |
@@ -238,7 +246,7 @@ instance FoldableWithIndex Pos Grid where
 -- | ```
 -- | > grid = fromArraysConform [[Just 1,Just 2],[Just 3,Just 4]]
 -- | > sequence grid
--- | (Just (fromArraysPartial [[1,2],[3,4]]))
+-- | (Just (fromArraysPartial (Size (Vec 2 2)) [[1,2],[3,4]]))
 -- | ```
 
 instance Traversable Grid where
@@ -250,7 +258,7 @@ instance Traversable Grid where
 -- | > grid = fromArraysConform [[1,2],[3,4]]
 -- | > fn (Pos (Vec x _)) _ = Just x 
 -- | > traverseWithIndex fn grid
--- | (Just (fromArraysPartial [[0,1],[0,1]]))
+-- | (Just (fromArraysPartial (Size (Vec 2 2)) [[0,1],[0,1]]))
 -- | ```
 
 instance TraversableWithIndex Pos Grid where
@@ -303,7 +311,7 @@ empty = UnsafeGrid (Size zero) Map.empty
 -- |
 -- | ```
 -- | > singleton 'A'
--- | (fromArraysPartial [['A']])
+-- | (fromArraysPartial (Size (Vec 1 1)) [['A']])
 -- | ```
 
 singleton :: forall a. a -> Grid a
@@ -314,7 +322,7 @@ singleton x = UnsafeGrid (Size $ Vec 1 1) (Map.singleton (Pos $ Vec 0 0) x)
 -- | ```
 -- | > fn (Pos (Vec x y)) = show x <> "-" <> show y
 -- | > fill (Size $ Vec 2 2) fn
--- | (fromArraysPartial [["0-0","1-0"],["0-1","1-1"]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [["0-0","1-0"],["0-1","1-1"]])
 -- | ```
 
 fill :: forall a. Size -> (Pos -> a) -> Grid a
@@ -350,7 +358,7 @@ printErrorFromArrays = case _ of
 -- |
 -- | ```
 -- | > fromArrays (Size $ Vec 2 2) [[1,2],[3,4]]
--- | (Just (fromArraysPartial [[1,2],[3,4]]))
+-- | (Just (fromArraysPartial (Size (Vec 2 2)) [[1,2],[3,4]]))
 -- | ```
 
 fromArrays :: forall a. Size -> Array (Array a) -> Maybe (Grid a)
@@ -379,7 +387,7 @@ fromArrays unsafeSize xs = ado
 -- |
 -- | ```
 -- | > fromArraysConform [[1,2],[3,4]]
--- | (Just (fromArraysPartial [[1,2],[3,4]]))
+-- | (Just (fromArraysPartial (Size (Vec 2 2)) [[1,2],[3,4]]))
 -- | ```
 
 fromArraysConform :: forall a. Array (Array a) -> Grid a
@@ -405,22 +413,20 @@ fromArraysConform xs = UnsafeGrid newSize newMap
 -- |
 -- | ```
 -- | > fromArraysPartial [[1,2],[3,4]]
--- | (fromArraysPartial [[1,2],[3,4]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [[1,2],[3,4]])
 -- | ```
 
-fromArraysPartial :: forall a. Partial => Array (Array a) -> Grid a
-fromArraysPartial xs = case fromArrays newSize xs of
+fromArraysPartial :: forall a. Partial => Size -> Array (Array a) -> Grid a
+fromArraysPartial givenSize xs = case fromArrays givenSize xs of
   Just x -> x
   Nothing -> unsafeCrashWith "Arrays have irregular shape"
-  where
-  newSize = array2dMaxSize xs
 
 -- | Creates a Grid from a Size and a Foldable containing entries for each cell.
 -- |
 -- | ```
 -- | > entries = [(Pos $ Vec 0 0) /\ 'A', (Pos $ Vec 0 1) /\ 'B']
--- | > fromFoldable (Size $ Vec 1 1) entries
--- | (Just (fromArraysPartial [['A'],['B']]))
+-- | > fromFoldable (Size $ Vec 1 2) entries
+-- | (Just (fromArraysPartial (Size (Vec 1 2)) [['A'],['B']]))
 -- | ```
 
 fromFoldable :: forall a f. Foldable f => Size -> f (Tuple Pos a) -> Maybe (Grid a)
@@ -536,7 +542,7 @@ positions = getSize >>> positionsFromSize
 -- |
 -- | ```
 -- | > rotateClockwise $ fromArraysConform [[1,2], [3,4]]
--- | (fromArraysPartial [[3,1],[4,2]]))
+-- | (fromArraysPartial (Size (Vec 2 2)) [[3,1],[4,2]]))
 -- | ```
 
 rotateClockwise :: forall a. Grid a -> Grid a
@@ -599,7 +605,7 @@ setSubGridClip vec src tgt = src
 -- | ```
 -- | > grid = fromArraysConform [[1,2], [3,4]]
 -- | > setCell (Pos $ Vec 0 0) 9 grid
--- | (Just (fromArraysPartial [[9,2],[3,4]]))
+-- | (Just (fromArraysPartial (Size (Vec 2 2)) [[9,2],[3,4]]))
 -- | ```
 
 setCell :: forall a. Pos -> a -> Grid a -> Maybe (Grid a)
@@ -612,7 +618,7 @@ setCell _ _ _ = Nothing
 -- | ```
 -- | > grid = fromArraysConform [[1,2], [3,4]]
 -- | > trySetCell (Pos $ Vec 0 0) 9 grid
--- | (fromArraysPartial [[9,2],[3,4]])
+-- | (fromArraysPartial (Size (Vec 2 2)) [[9,2],[3,4]])
 -- | ```
 
 trySetCell :: forall a. Pos -> a -> Grid a -> Grid a
