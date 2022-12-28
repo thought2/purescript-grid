@@ -45,8 +45,3 @@ gridC = Grid.fromArraysConform
   ]
 ```
 We can prrof that in the REPL
-
-```
-> gridB == gridC
-true
-```
