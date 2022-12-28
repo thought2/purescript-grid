@@ -1,5 +1,14 @@
+--------------------------------------------------------------------------------
+--- Intro
+--------------------------------------------------------------------------------
+
 -- | Intro
 -- |
+
+--------------------------------------------------------------------------------
+--- TOC
+--------------------------------------------------------------------------------
+
 -- | - Types
 -- |   - [Grid](#t:Grid)
 -- |   - [Pos](#t:Pos)
@@ -70,6 +79,10 @@
 -- |   - modifyCellModulo
 -- |   - tryModifyCell
 
+--------------------------------------------------------------------------------
+--- Exports
+--------------------------------------------------------------------------------
+
 module Data.Grid
   ( ErrorFromArrays(..)
   , Grid
@@ -101,6 +114,10 @@ module Data.Grid
 
   , module Exp
   ) where
+
+--------------------------------------------------------------------------------
+--- Imports
+--------------------------------------------------------------------------------
 
 import Prelude
 
@@ -403,6 +420,13 @@ fromFoldable unsafeSize xs = ado
   checkPositions = positionsFromSize newSize
     # traverse_ (\pos -> void $ Map.lookup pos newMap)
 
+-- TODO: fromArray :: forall a. Size -> Array a -> Maybe (Grid a)
+-- TODO: fromArrayConform :: forall a. Int -> Array a -> Grid a
+-- TODO: fromArrayAsRow :: forall a. Array a -> Grid a
+-- TODO: fromArrayAsColumn :: forall a. Array a -> Grid a
+-- TODO: genGrid :: forall a. Gen (Grid a)
+-- TODO: genGridSized :: forall a. Size -> Gen (Grid a)
+
 --------------------------------------------------------------------------------
 --- Destructors
 --------------------------------------------------------------------------------
@@ -487,6 +511,10 @@ getCellModulo (Pos (Vec x y)) grid = unsafePartial
 positions :: forall a. Grid a -> Array Pos
 positions = getSize >>> positionsFromSize
 
+-- TODO: getSubGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
+-- TODO: getSubGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
+-- TODO: getSubGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
+
 --------------------------------------------------------------------------------
 --- Grid Modifiers
 --------------------------------------------------------------------------------
@@ -494,7 +522,7 @@ positions = getSize >>> positionsFromSize
 -- | Rotate the Grid clockwise (90 degree).
 -- |
 -- | ```
--- | > rotateClockwise $ fromArraysConform [[1,2], [3,4]]         
+-- | > rotateClockwise $ fromArraysConform [[1,2], [3,4]]
 -- | (fromArraysPartial [[3,1],[4,2]]))
 -- | ```
 
@@ -514,6 +542,22 @@ rotateClockwise grid@(UnsafeGrid oldSize _) =
     (Pos $ Vec (maxY - y) x)
     (unsafePartial $ unsafeLookup "rotate" pos grid)
 
+-- TODO: zipApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
+-- TODO: zip :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO: zipWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO: explodeApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
+-- TODO: explode :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO: explodeWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO: bind :: forall a b. Grid a -> (a -> Grid b) -> Grid b
+-- TODO: bindWithIndex :: forall a b. Grid a -> (Pos -> a -> Grid b) -> Grid b
+-- TODO: join :: forall a b. Grid (Grid a) -> Grid a
+-- TODO: mirrorY :: forall a. Grid a -> Grid a
+-- TODO: mirrorX :: forall a. Grid a -> Grid a
+-- TODO: appendY :: forall a. Grid a -> Grid a -> Grid a   
+-- TODO: appendX :: forall a. Grid a -> Grid a -> Grid a
+-- TODO: resize :: forall a. Size -> Grid a -> Maybe (Grid a)
+-- TODO: resizeFit :: forall a. Size -> a -> Grid a -> Grid a
+
 --------------------------------------------------------------------------------
 --- SubGrid Modifiers
 --------------------------------------------------------------------------------
@@ -527,6 +571,13 @@ setSubGridClip :: forall a. Pos -> Grid a -> Grid a -> Grid a
 setSubGridClip vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> fromMaybe grid $ setCell (vec + k) v grid) tgt
+
+-- TODO: modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
+-- TODO: setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
+-- TODO: modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
+-- TODO: modifySubGridClip :: forall a. Pos -> Size -> (a -> a) -> Grid a
+-- TODO: trySetSubGrid :: forall a. Pos -> Grid a -> Grid a
+-- TODO: tryModifySubGrid :: Pos -> Size -> (a -> a) -> Grid a
 
 --------------------------------------------------------------------------------
 --- Cell Modifiers
@@ -554,6 +605,11 @@ setCell _ _ _ = Nothing
 trySetCell :: forall a. Pos -> a -> Grid a -> Grid a
 trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 
+-- TODO: modifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Maybe (Grid a) 
+-- TODO: setCellModulo :: forall a. Pos -> a -> Grid a -> Grid a
+-- TODO: modifyCellModulo :: forall a. Pos -> (a -> a) -> Grid a -> Grid a 
+-- TODO: tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
+
 --------------------------------------------------------------------------------
 --- Util
 --------------------------------------------------------------------------------
@@ -577,12 +633,6 @@ isInSize (Pos (Vec x y)) (Size (Vec w h)) =
 inRange :: Int -> Int -> Boolean
 inRange x w = 0 <= x && x < w
 
-deduceSize :: forall a. Array (Array a) -> Size
-deduceSize xs = Size $ Vec x y
-  where
-  x = Arr.length <<< fromMaybe [] <<< Arr.head $ xs
-  y = Arr.length xs
-
 lookup2d :: forall a. Pos -> Array (Array a) -> Maybe a
 lookup2d (Pos (Vec x y)) = index' y >=> index' x
 
@@ -602,9 +652,6 @@ normalizeSize :: Size -> Size
 normalizeSize (Size (Vec x _)) | x <= 0 = Size $ Vec 0 0
 normalizeSize (Size (Vec _ y)) | y <= 0 = Size $ Vec 0 0
 normalizeSize s = s
-
-normalizeInt :: Int -> Int
-normalizeInt = max 0
 
 getSize :: forall a. Grid a -> Size
 getSize (UnsafeGrid siz _) = siz
@@ -637,9 +684,6 @@ padRight n char str = str <> buffer
   buffer = Arr.replicate len char # fromCharArray
   len = n - Str.length str
 
-printVec :: Vec Int -> String
-printVec (Vec x y) = fold [ "(", show x, "|", show y, ")" ]
-
 spaced :: String -> String
 spaced x = " " <> x <> " "
 
@@ -649,65 +693,3 @@ array2dMaxSize xs = normalizeSize $ newSize
   newSize = Size $ Vec width height
   width = xs <#> Arr.length # Arr.sort # Arr.last # fromMaybe 0
   height = Arr.length xs
-
---------------------------------------------------------------------------------
---- Planned API
---------------------------------------------------------------------------------
-
--- setCell :: forall a. Pos -> a -> Grid a -> Maybe (Grid a)
--- getCell :: forall a. -> Pos -> Grid a -> Maybe a
--- modifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Maybe (Grid a) 
-
--- setCellModulo :: forall a. Pos -> a -> Grid a -> Grid a
--- getCellModulo :: forall a. -> Pos -> Grid a -> a
--- modifyCellModulo :: forall a. Pos -> (a -> a) -> Grid a -> Grid a 
-
--- trySetCell :: forall a. Pos -> a -> Grid a -> Grid a
--- tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
-
--- setSubGrid :: forall a. Pos -> Grid a -> Maybe (Grid a)
--- getSubGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
--- modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
-
--- setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
--- getSubGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
--- modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
-
--- setSubGridClip :: forall a. Pos -> Grid a -> Grid a
--- getSubGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
--- modifySubGridClip :: Pos -> Size -> (a -> a) -> Grid a
-
--- trySetSubGrid :: forall a. Pos -> Grid a -> Grid a
--- tryModifySubGrid :: Pos -> Size -> (a -> a) -> Grid a
-
--- zipApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
--- zip :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
--- zipWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
-
--- explodeApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
--- explode :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
--- explodeWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
-
--- bind :: Grid a -> (a -> Grid b) -> Grid b
--- bindWithIndex :: Grid a -> (Pos -> a -> Grid b) -> Grid b
--- join :: Grid (Grid a) -> Grid a
-
--- singleton :: forall a. a -> Grid a
-
--- arrayToRowVector :: Array a -> Grid a
--- arrayToColumnVector :: Array a -> Grid a
-
--- fromFoldable :: Size -> f (Pos /\ a) -> Maybe (Grid a)
-
--- mirrorY :: Grid a -> Grid a
--- mirrorX :: Grid a -> Grid a
-
--- genGrid :: Gen a -> Gen (Grid a)
--- genGridSized :: Size -> Gen a -> Gen (Grid a)
-
--- appendY :: Grid a -> Grid a -> Grid a   
--- appendX :: Grid a -> Grid a -> Grid a
-
--- resize :: Size -> Grid a -> Maybe (Grid a)
--- resizeFit :: Size -> a -> Grid a -> Grid a
-
