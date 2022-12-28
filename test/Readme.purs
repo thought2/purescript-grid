@@ -38,15 +38,15 @@ gridB = Grid.fromArraysConform
 --
 -- So the following would result in the same Grid.
 
-gridC :: Grid Char
-gridC = Grid.fromArraysConform
+gridB' :: Grid Char
+gridB' = Grid.fromArraysConform
   [ [ 'a', 'b', 'c', 'x', 'x' ]
   , [ 'd', 'e', 'f' ]
   ]
 
--- We can prrof that in the REPL
+-- We can proof that in the REPL
 --
--- ```
+-- ```text
 -- > gridB == gridC
 -- true
 -- ```

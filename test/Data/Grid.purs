@@ -5,6 +5,7 @@ import Prelude
 import Data.Grid (Pos(..), Size(..), Vec(..))
 import Data.Grid as G
 import Data.Maybe (Maybe(..))
+import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Partial.Unsafe (unsafePartial)
@@ -306,3 +307,19 @@ spec =
                 , [ "0-2", "1-2" ]
                 ]
 
+    describe "Debug Tools" do
+      describe "printStringGrid" do
+        it "works for a simple example" do
+          do
+            G.printStringGrid $
+              G.fromArraysConform
+                [ [ "bird", "dog" ]
+                , [ "cat", "horse" ]
+                , [ "monkey", "giraffe" ]
+                ]
+            `shouldEqual` do
+              Str.joinWith "\n"
+                [ "bird   dog    "
+                , "cat    horse  "
+                , "monkey giraffe"
+                ]

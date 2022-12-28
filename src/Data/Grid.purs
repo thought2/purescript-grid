@@ -78,17 +78,22 @@
 -- |   - setCellModulo
 -- |   - modifyCellModulo
 -- |   - tryModifyCell
+-- |
+-- | - Debug Tools
+-- |   - [printStringGrid](#v:printStringGrid)
 
 --------------------------------------------------------------------------------
 --- Exports
 --------------------------------------------------------------------------------
 
 module Data.Grid
+  -- Types
   ( ErrorFromArrays(..)
   , Grid
   , Pos(..)
   , Size(..)
 
+  -- Constructors
   , empty
   , singleton
   , fill
@@ -97,6 +102,7 @@ module Data.Grid
   , fromArraysPartial
   , fromFoldable
 
+  -- Destructors
   , toArrays
   , toUnfoldable
   , size
@@ -105,12 +111,19 @@ module Data.Grid
   , getCellModulo
   , positions
 
+  -- Grid Modifiers
   , rotateClockwise
 
+  -- SubGrid Modifiers
   , setSubGrid
   , setSubGridClip
+
+  -- Cell Modifiers
   , setCell
   , trySetCell
+
+  -- Debug Tools
+  , printStringGrid
 
   , module Exp
   ) where
@@ -611,7 +624,25 @@ trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 -- TODO: tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
 
 --------------------------------------------------------------------------------
---- Util
+--- Debug Tools
+--------------------------------------------------------------------------------
+
+printStringGrid :: Grid String -> String
+printStringGrid grid = grid
+  # toArrays
+  <#> mkLine
+  # Str.joinWith "\n"
+  where
+  mkLine = map (padRight maxLength ' ') >>> Str.joinWith ""
+  maxLength = grid
+    # values
+    <#> Str.length
+    # Arr.sort
+    # Arr.last
+    # fromMaybe 0
+
+--------------------------------------------------------------------------------
+--- Internal Util
 --------------------------------------------------------------------------------
 
 range' :: Int -> Array Int
@@ -663,20 +694,6 @@ values :: forall a. Grid a -> Array a
 values (UnsafeGrid _ gridMap) = gridMap
   # Map.values
   # List.toUnfoldable
-
-printStringGrid :: Grid String -> String
-printStringGrid grid = grid
-  # toArrays
-  <#> mkLine
-  # Str.joinWith "\n"
-  where
-  mkLine = map (padRight (maxLength + 1) ' ') >>> Str.joinWith ""
-  maxLength = grid
-    # values
-    <#> Str.length
-    # Arr.sort
-    # Arr.head
-    # fromMaybe 0
 
 padRight :: Int -> Char -> String -> String
 padRight n char str = str <> buffer
