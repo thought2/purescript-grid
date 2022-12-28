@@ -45,3 +45,8 @@ gridC = Grid.fromArraysConform
   ]
 ```
 We can prrof that in the REPL
+
+```text
+> gridB == gridC
+true
+```
