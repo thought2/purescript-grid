@@ -99,6 +99,22 @@ spec =
                   , [ "0-2", "1-2" ]
                   ]
 
+      describe "mkGrid" do
+        it "works for a simple example" do
+          unsafePartial $
+            G.mkGrid (Size $ Vec 2 3)
+              [ [ "0-0", "1-0" ]
+              , [ "0-1", "1-1" ]
+              , [ "0-2", "1-2" ]
+              ]
+              `shouldEqual`
+                G.fromArraysConform
+                  [ [ "0-0", "1-0" ]
+                  , [ "0-1", "1-1" ]
+                  , [ "0-2", "1-2" ]
+                  ]
+
+
       describe "fromFoldable" do
         it "works for a simple example" do
           unsafePartial $
