@@ -12,6 +12,7 @@ import Prelude
 import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
 import Data.Maybe (Maybe)
+import Data.String as Str
 import Effect.Console (log)
 ```
 We can define a Grid from Arrays:
@@ -78,6 +79,41 @@ Strings first by mapping over the grid:
 'd' 'e' 'f'
 ```
 
+The printer also works if the strings in the cells have different lengths.
+Here we generate a Grid with the `fill` function:
+```hs
+gridC :: Grid String
+gridC = Grid.fill (Size $ Vec 4 5) fillFn
+  where
+  fillFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
+```
+And print it using the defaults:
+```text
+> log $ printGrid_ gridC
+A           A           A           A          
+A           Ab          Abr         Abra       
+A           Abr         Abrak       Abrakad    
+A           Abra        Abrakad     Abrakadabr 
+A           Abrak       Abrakadab   Abrakadabra
+```
+
+We can also customize the printing by defining some parameters:
+
+```hs
+printOpts = Grid.defaultPrintOpts
+  { formatCell = Grid.padLeft '.'
+  , colSep = "  "
+  }
+```
+And then pass them to `printGrid`: 
+```text
+> log $ printGrid printOpts gridC
+..........A  ..........A  ..........A  ..........A
+..........A  .........Ab  ........Abr  .......Abra
+..........A  ........Abr  ......Abrak  ....Abrakad
+..........A  .......Abra  ....Abrakad  .Abrakadabr
+..........A  ......Abrak  ..Abrakadab  Abrakadabra
+```
 
 [API Docs]: https://pursuit.purescript.org/packages/purescript-grid
 ```hs
