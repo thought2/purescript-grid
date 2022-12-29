@@ -65,18 +65,18 @@
 -- | - SubGrid Modifiers
 -- |   - [setSubGrid](#v:setSubGrid)
 -- |   - [setSubGridClip](#v:setSubGridClip)
+-- |   - [trySetSubGrid](#v:trySetSubGrid)
+-- |   - [setSubGridModulo](#v:setSubGridModulo)
 -- |   - modifySubGrid
--- |   - setSubGridModulo
 -- |   - modifySubGridModulo
 -- |   - modifySubGridClip
--- |   - trySetSubGrid
 -- |   - tryModifySubGrid
 -- |
 -- | - Cell Modifiers
 -- |   - [setCell](#v:setCell) 
 -- |   - [trySetCell](#v:trySetCell)
+-- |   - [setCellModulo](#v:setCellModulo)
 -- |   - modifyCell
--- |   - setCellModulo
 -- |   - modifyCellModulo
 -- |   - tryModifyCell
 -- |
@@ -122,10 +122,13 @@ module Data.Grid
   -- SubGrid Modifiers
   , setSubGrid
   , setSubGridClip
+  , trySetSubGrid
+  , setSubGridModulo
 
   -- Cell Modifiers
   , setCell
   , trySetCell
+  , setCellModulo
 
   -- Pretty Printing
   , CellFormatter(..)
@@ -587,11 +590,23 @@ setSubGridClip vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> fromMaybe grid $ setCell (vec + k) v grid) tgt
 
+-- TODO: Test
+-- TODO: docs
+trySetSubGrid :: forall a. Pos -> Grid a -> Grid a -> Grid a
+trySetSubGrid pos subGrid grid =
+  setSubGrid pos subGrid grid # fromMaybe grid
+
+-- TODO: test
+-- TODO: docs
+setSubGridModulo :: forall a. Pos -> Grid a -> Grid a -> Grid a
+setSubGridModulo vec src tgt = src
+  # (toUnfoldable :: _ -> Array _)
+  # foldl (\grid (Tuple k v) -> setCellModulo (vec + k) v grid) tgt
+
 -- TODO: modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
 -- TODO: setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
 -- TODO: modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
 -- TODO: modifySubGridClip :: forall a. Pos -> Size -> (a -> a) -> Grid a
--- TODO: trySetSubGrid :: forall a. Pos -> Grid a -> Grid a
 -- TODO: tryModifySubGrid :: Pos -> Size -> (a -> a) -> Grid a
 
 --------------------------------------------------------------------------------
@@ -620,8 +635,15 @@ setCell _ _ _ = Nothing
 trySetCell :: forall a. Pos -> a -> Grid a -> Grid a
 trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 
+-- TODO: Doc
+-- TODO: Test
+setCellModulo :: forall a. Pos -> a -> Grid a -> Grid a
+setCellModulo (Pos pos) x grid = trySetCell newPos x grid
+  where
+  (Size gridSize) = size grid
+  newPos = Pos (mod <$> pos <*> gridSize)
+
 -- TODO: modifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Maybe (Grid a) 
--- TODO: setCellModulo :: forall a. Pos -> a -> Grid a -> Grid a
 -- TODO: modifyCellModulo :: forall a. Pos -> (a -> a) -> Grid a -> Grid a 
 -- TODO: tryModifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
 

@@ -13,6 +13,7 @@ import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
 import Data.Maybe (Maybe)
 import Data.String as Str
+import Data.String.CodeUnits as StrC
 import Effect.Console (log)
 ```
 We can define a Grid from Arrays:
@@ -80,7 +81,7 @@ Strings first by mapping over the grid:
 ```
 
 The printer also works if the strings in the cells have different lengths.
-Here we generate a Grid with the `fill` function:
+Here we generate a Grid based on the position of each cell by using the `fill` function:
 ```hs
 gridC :: Grid String
 gridC = Grid.fill (Size $ Vec 4 5) fillFn
@@ -97,7 +98,7 @@ A           Abra        Abrakad     Abrakadabr
 A           Abrak       Abrakadab   Abrakadabra
 ```
 
-We can also customize the printing by defining some parameters:
+We can also customize the printing by overwriting the default options:
 
 ```hs
 printOpts = Grid.defaultPrintOpts
@@ -115,6 +116,83 @@ And then pass them to `printGrid`:
 ..........A  ......Abrak  ..Abrakadab  Abrakadabra
 ```
 
+### Manipulating Grids
+
+```hs
+gridD :: Grid Char
+gridD = Grid.fill (Size $ Vec 8 6) (\_ -> '*')
+```
+```text
+> import Data.String.CodeUnits as StrC
+> log $ printGrid_ $ StrC.singleton <$> gridD
+* * * * * * * *
+* * * * * * * *
+* * * * * * * *
+* * * * * * * *
+* * * * * * * *
+* * * * * * * *
+```
+```hs
+gridE :: Grid Char
+gridE = Grid.trySetCell (Pos $ Vec 2 3) 'A' gridD
+```
+```text
+> log $ printGrid_ $ StrC.singleton <$> gridE
+* * * * * * * *
+* * * * * * * *
+* * * * * * * *
+* * A * * * * *
+* * * * * * * *
+* * * * * * * *
+```
+```hs
+gridF :: Grid Char
+gridF = Grid.fromArraysConform
+  [ [ 'H', 'E', 'L', 'L', 'O' ]
+  , [ 'W', 'O', 'R', 'L', 'D' ]
+  ]
+
+gridG :: Grid Char
+gridG = Grid.trySetSubGrid (Pos $ Vec 1 2) gridF gridD
+```
+```text
+> log $ printGrid_ $ StrC.singleton <$> gridG 
+* * * * * * * *
+* * * * * * * *
+* H E L L O * *
+* W O R L D * *
+* * * * * * * *
+* * * * * * * *
+```
+```hs
+gridH :: Grid Char
+gridH = Grid.setSubGridClip (Pos $ Vec 5 2) gridF gridD
+```
+```text
+> log $ printGrid_ $ StrC.singleton <$> gridH
+* * * * * * * *
+* * * * * * * *
+* * * * * H E L
+* * * * * W O R
+* * * * * * * *
+* * * * * * * *
+```
+```hs
+gridI :: Grid Char
+gridI = Grid.setSubGridModulo (Pos $ Vec 5 2) gridF gridD
+```
+```text
+> log $ printGrid_ $ StrC.singleton <$> gridI
+* * * * * * * *
+* * * * * * * *
+L O * * * H E L
+L D * * * W O R
+* * * * * * * *
+* * * * * * * *
+```
+```hs
+
+```
 [API Docs]: https://pursuit.purescript.org/packages/purescript-grid
 ```hs
 
