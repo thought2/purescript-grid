@@ -1,6 +1,7 @@
 -- # purescript-grid
 --
 -- ## Example
+-- ### Creating Grids
 
 module Test.Readme where
 
@@ -11,6 +12,7 @@ import Prelude
 import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
 import Data.Maybe (Maybe)
+import Effect.Console (log)
 
 -- We can define a Grid from Arrays:
 
@@ -44,10 +46,37 @@ gridB' = Grid.fromArraysConform
   , [ 'd', 'e', 'f' ]
   ]
 
--- We can proof that in the REPL
+-- We can verify this in the REPL
 --
 -- ```text
 -- > gridB == gridC
 -- true
 -- ```
-
+--
+-- There are many other ways to create a Grid. You can find them in the [API
+-- Docs].
+--
+-- ### Pretty Printing
+--
+-- When a value is returned from an expression in the REPL per default the
+-- `Show` instance is used to log the value. In the case of a `Grid` this leads
+-- the following rather technical representation. (`mkGrid` is another way to create a `Grid`, it has a `Partial` instance hence
+-- it is ok that it does not return a `Maybe Grid`.)
+--
+-- ```text
+-- > gridB
+-- (mkGrid (Size (Vec 3 2)) [['a','b','c'],['d','e','f']])
+-- ```
+--
+-- However, we can also use the `printGrid_` function to get a nicer output. The
+-- function works on `Grid String` only, so we have to turn the characters into
+-- Strings first by mapping over the grid:
+--
+-- ```text
+-- > log $ printGrid_ $ show <$> gridB
+-- 'a' 'b' 'c'
+-- 'd' 'e' 'f'
+-- ```
+--
+--
+-- [API Docs]: https://pursuit.purescript.org/packages/purescript-grid

@@ -81,8 +81,11 @@
 -- |   - tryModifyCell
 -- |
 -- | - Pretty Printing
+-- |   - [CellFormatter](#t:CellFormatter)
+-- |   - [printGrid_](#v:printGrid_)
 -- |   - [printGrid](#v:printGrid)
--- |   - [printStringGrid](#v:printStringGrid)
+-- |   - [padRight](#v:padRight)
+-- |   - [padLeft](#v:padLeft)
 
 --------------------------------------------------------------------------------
 --- Exports
@@ -125,8 +128,13 @@ module Data.Grid
   , trySetCell
 
   -- Pretty Printing
+  , CellFormatter(..)
+  , printGrid_
+  , PrintOpts
+  , defaultPrintOpts
   , printGrid
-  , printStringGrid
+  , padRight
+  , padLeft
 
   , module Exp
   ) where
@@ -621,6 +629,8 @@ trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 --- Pretty Printing
 --------------------------------------------------------------------------------
 
+-- | Print a grid without options
+-- | 
 -- | ```
 -- | grid = G.fromArraysConform
 -- |   [ [ "bird", "dog" ]
@@ -630,15 +640,62 @@ trySetCell pos x grid = setCell pos x grid # fromMaybe grid
 -- | ```
 -- | ---
 -- | ```
--- | > printGrid grid
--- | "bird"   "dog"
--- | "cat"    "horse"
--- | "monkey" "giraffe"
+-- | > printGrid_ grid
+-- | bird    dog
+-- | cat     horse
+-- | monkey  giraffe
 -- | ```
 
-printGrid :: forall a. Show a => Grid a -> String
-printGrid = map show >>> printStringGrid
+printGrid_ :: Grid String -> String
+printGrid_ = printGrid defaultPrintOpts
 
+newtype CellFormatter = CellFormatter (Int -> String -> String)
+
+derive instance Newtype CellFormatter _
+
+-- | Printing Options
+-- |
+-- |  - formatCell formats the string in each cell
+-- |  - colSep separator between columns
+-- |  - rowSep separator between rows
+
+type PrintOpts =
+  { formatCell :: CellFormatter
+  , colSep :: String
+  , rowSep :: String
+  }
+
+-- | Some defaults for `PrintOpts`
+
+defaultPrintOpts :: PrintOpts
+defaultPrintOpts =
+  { formatCell: padRight ' '
+  , colSep: " "
+  , rowSep: "\n"
+  }
+
+-- | `CellFormatter` that adds a padding to the left
+-- |
+-- | ```
+-- | > (unwrap $ G.padLeft '.') 10 "Hello"
+-- | .....Hello
+-- | ```
+
+padLeft :: Char -> CellFormatter
+padLeft char = CellFormatter \n str -> pad char n str <> str
+
+-- | `CellFormatter` that adds a padding to the right
+-- |
+-- | ```
+-- | > (unwrap $ G.padRight '.') 10 "Hello" 
+-- | Hello.....
+-- | ```
+
+padRight :: Char -> CellFormatter
+padRight char = CellFormatter \n str -> str <> pad char n str
+
+-- | Print a grid with options
+-- | 
 -- | ```
 -- | grid = G.fromArraysConform
 -- |   [ [ "bird", "dog" ]
@@ -648,25 +705,33 @@ printGrid = map show >>> printStringGrid
 -- | ```
 -- | ---
 -- | ```
--- | > printStringGrid grid
--- | bird   dog
--- | cat    horse
--- | monkey giraffe
+-- | > printGrid defaultPrintOpts { formatCell = padLeft '.' }
+-- | ...bird ....dog
+-- | ....cat ..horse
+-- | .monkey giraffe
 -- | ```
 
-printStringGrid :: Grid String -> String
-printStringGrid grid = grid
+printGrid :: PrintOpts -> Grid String -> String
+printGrid opts grid = grid
   # toArrays
   <#> mkLine
-  # Str.joinWith "\n"
+  # Str.joinWith opts.rowSep
   where
-  mkLine = map (padRight maxLength ' ') >>> Str.joinWith ""
+  mkLine = map (unwrap opts.formatCell $ maxLength)
+    >>> Str.joinWith opts.colSep
+
   maxLength = grid
     # values
     <#> Str.length
     # Arr.sort
     # Arr.last
     # fromMaybe 0
+
+pad :: Char -> Int -> String -> String
+pad char n str = buffer
+  where
+  buffer = Arr.replicate len char # fromCharArray
+  len = n - Str.length str
 
 --------------------------------------------------------------------------------
 --- Internal Util
@@ -721,12 +786,6 @@ values :: forall a. Grid a -> Array a
 values (UnsafeGrid _ gridMap) = gridMap
   # Map.values
   # List.toUnfoldable
-
-padRight :: Int -> Char -> String -> String
-padRight n char str = str <> buffer
-  where
-  buffer = Arr.replicate len char # fromCharArray
-  len = n - Str.length str
 
 spaced :: String -> String
 spaced x = " " <> x <> " "

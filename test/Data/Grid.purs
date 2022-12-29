@@ -5,6 +5,7 @@ import Prelude
 import Data.Grid (Pos(..), Size(..), Vec(..))
 import Data.Grid as G
 import Data.Maybe (Maybe(..))
+import Data.Newtype (unwrap)
 import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
@@ -113,7 +114,6 @@ spec =
                   , [ "0-1", "1-1" ]
                   , [ "0-2", "1-2" ]
                   ]
-
 
       describe "fromFoldable" do
         it "works for a simple example" do
@@ -324,10 +324,36 @@ spec =
                 ]
 
     describe "Pretty Printing" do
+      describe "CellFormatter" do
+        it "can be constructed and destructured" do
+          let
+            G.CellFormatter _ = G.CellFormatter \_ -> identity
+          pure unit
+
+      describe "printGrid_" do
+        it "works for a simple example" do
+          do
+            G.printGrid_ $
+              G.fromArraysConform
+                [ [ "bird", "dog" ]
+                , [ "cat", "horse" ]
+                , [ "monkey", "giraffe" ]
+                ]
+            `shouldEqual` do
+              Str.joinWith "\n"
+                [ "bird    dog    "
+                , "cat     horse  "
+                , "monkey  giraffe"
+                ]
+
       describe "printGrid" do
         it "works for a simple example" do
           do
-            G.printGrid $
+            G.printGrid
+              { formatCell: G.padRight '.'
+              , colSep: "|"
+              , rowSep: "\n\n"
+              } $
               G.fromArraysConform
                 [ [ "bird", "dog" ]
                 , [ "cat", "horse" ]
@@ -335,22 +361,21 @@ spec =
                 ]
             `shouldEqual` do
               Str.joinWith "\n"
-                [ "\"bird\"   \"dog\"    "
-                , "\"cat\"    \"horse\"  "
-                , "\"monkey\" \"giraffe\""
+                [ "bird...|dog...."
+                , ""
+                , "cat....|horse.."
+                , ""
+                , "monkey.|giraffe"
                 ]
-      describe "printStringGrid" do
+
+      describe "padRight" do
         it "works for a simple example" do
           do
-            G.printStringGrid $
-              G.fromArraysConform
-                [ [ "bird", "dog" ]
-                , [ "cat", "horse" ]
-                , [ "monkey", "giraffe" ]
-                ]
-            `shouldEqual` do
-              Str.joinWith "\n"
-                [ "bird   dog    "
-                , "cat    horse  "
-                , "monkey giraffe"
-                ]
+            (unwrap $ G.padRight '.') 10 "Hello"
+            `shouldEqual` "Hello....."
+
+      describe "padLeft" do
+        it "works for a simple example" do
+          do
+            (unwrap $ G.padLeft '.') 10 "Hello"
+            `shouldEqual` ".....Hello"
