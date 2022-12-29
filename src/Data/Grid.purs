@@ -55,10 +55,10 @@
 -- |   - bind
 -- |   - bindWithIndex
 -- |   - join
--- |   - mirrorY
--- |   - mirrorX
--- |   - appendY
--- |   - appendX
+-- |   - [mirrorX](#v:mirrorX)
+-- |   - [mirrorY](#v:mirrorY)
+-- |   - [appendX](#:appendX)
+-- |   - [appendY](#:appendY)
 -- |   - resize
 -- |   - resizeFit
 -- |
@@ -124,6 +124,10 @@ module Data.Grid
   , setSubGridClip
   , trySetSubGrid
   , setSubGridModulo
+  , mirrorX
+  , mirrorY
+  , appendX
+  , appendY
 
   -- Cell Modifiers
   , setCell
@@ -150,6 +154,7 @@ import Prelude
 
 import Control.Alternative (guard)
 import Data.Array as Arr
+import Data.Bifunctor (lmap)
 import Data.Foldable (class Foldable, fold, foldMap, foldl, foldr, traverse_)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndexDefaultL, foldlWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
@@ -166,9 +171,11 @@ import Data.String.CodeUnits (fromCharArray)
 import Data.Traversable (class Traversable, sequenceDefault, traverse)
 import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 import Data.Tuple (Tuple(..), uncurry)
+import Data.Tuple as Tuple
 import Data.Unfoldable (class Unfoldable, unfoldr)
-import Data.Vector2 (Vec(..))
 import Data.Vector2 (Vec(..)) as Exp
+import Data.Vector2 (Vec(..), oneX, oneY)
+import Data.Vector2 as V2
 import Data.Vector2 as Vec
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
 
@@ -291,6 +298,8 @@ derive newtype instance Semiring Pos
 
 instance Show Pos where
   show = genericShow
+
+derive instance Newtype Pos _
 
 derive instance Generic Pos _
 
@@ -569,10 +578,86 @@ rotateClockwise grid@(UnsafeGrid oldSize _) =
 -- TODO: bind :: forall a b. Grid a -> (a -> Grid b) -> Grid b
 -- TODO: bindWithIndex :: forall a b. Grid a -> (Pos -> a -> Grid b) -> Grid b
 -- TODO: join :: forall a b. Grid (Grid a) -> Grid a
--- TODO: mirrorY :: forall a. Grid a -> Grid a
--- TODO: mirrorX :: forall a. Grid a -> Grid a
--- TODO: appendY :: forall a. Grid a -> Grid a -> Grid a   
--- TODO: appendX :: forall a. Grid a -> Grid a -> Grid a
+
+
+mirrorX :: forall a. Grid a -> Grid a
+mirrorX grid = UnsafeGrid gridSize newMap
+  where
+  gridSize@(Size (Vec _ height)) = size grid
+
+  newMap = grid
+    # getEntries
+    # overMapKey mkKey
+
+  mkKey (Pos pos) =
+    (Pos $ V2.modifyY (maxY - _) pos)
+
+  maxY = height - 1
+
+-- TODO: docs
+-- TODO: test
+mirrorY :: forall a. Grid a -> Grid a
+mirrorY grid = UnsafeGrid gridSize newMap
+  where
+  gridSize@(Size (Vec width _)) = size grid
+
+  newMap = grid
+    # getEntries
+    # overMapKey mkEntry
+
+  mkEntry (Pos pos) =
+    (Pos $ V2.modifyX (maxX - _) pos)
+
+  maxX = width - 1
+
+
+-- TODO: docs
+-- TODO: test
+-- TODO: handle resize
+appendX :: forall a. Grid a -> Grid a -> Grid a
+appendX gridL gridR = UnsafeGrid newSize newMap
+  where
+  Size sizeL = size gridL
+  Size sizeR = size gridR
+
+  newSize = Size (Vec add min <*> sizeL <*> sizeR)
+
+  mapRight = gridR
+    # getEntries
+    # overMapKey mkKey
+
+  mkKey (Pos vec) = Pos $ vec + moveVec
+
+  moveVec = oneX * sizeL
+
+  newMap = gridL
+    # getEntries
+    # Map.union mapRight
+
+-- TODO: docs
+-- TODO: test
+-- TODO: handle resize
+
+appendY :: forall a. Grid a -> Grid a -> Grid a
+appendY gridTop gridBot = UnsafeGrid newSize newMap
+  where
+  Size sizeTop = size gridTop
+  Size sizeBot = size gridBot
+
+  newSize = Size (Vec min add <*> sizeTop <*> sizeBot)
+
+  mapBot = gridBot
+    # getEntries
+    # overMapKey mkKey
+
+  mkKey (Pos vec) = Pos $ vec + moveVec
+
+  moveVec = oneY * sizeTop
+
+  newMap = gridTop
+    # getEntries
+    # Map.union mapBot
+
 -- TODO: resize :: forall a. Size -> Grid a -> Maybe (Grid a)
 -- TODO: resizeFit :: forall a. Size -> a -> Grid a -> Grid a
 
@@ -818,3 +903,17 @@ array2dMaxSize xs = normalizeSize $ newSize
   newSize = Size $ Vec width height
   width = xs <#> Arr.length # Arr.sort # Arr.last # fromMaybe 0
   height = Arr.length xs
+
+overMapEntries :: forall k v. Ord k => (Array (Tuple k v) -> Array (Tuple k v)) -> Map k v -> Map k v
+overMapEntries f mp = mp
+  # Map.toUnfoldable
+  # f
+  # Map.fromFoldable
+
+overMapEntry :: forall k v. Ord k => (Tuple k v -> Tuple k v) -> Map k v -> Map k v
+overMapEntry f mp = mp
+  # overMapEntries (map f)
+
+overMapKey :: forall k v. Ord k => (k -> k) -> Map k v -> Map k v
+overMapKey f mp = mp
+  # overMapEntry (lmap f)

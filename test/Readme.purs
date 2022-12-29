@@ -9,12 +9,20 @@ module Test.Readme where
 
 import Prelude
 
+import Control.Apply (lift2)
 import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
+import Data.Int (round, toNumber)
+import Data.Int as Int
 import Data.Maybe (Maybe)
+import Data.Newtype as NT
+import Data.Number (abs, acos, asin, floor)
+import Data.Number as Num
 import Data.String as Str
 import Data.String.CodeUnits as StrC
+import Data.Vector2 ((//))
 import Effect.Console (log)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- We can define a Grid from Arrays:
 
@@ -190,7 +198,79 @@ gridI = Grid.setSubGridModulo (Pos $ Vec 5 2) gridF gridD
 -- * * * * * * * *
 -- ```
 
+norm :: Size -> Pos -> Vec Number
+norm (Size vecSize) (Pos vecPos) =
+  (toNumber <$> vecPos) // (toNumber <$> maxPos)
+  where
+  maxPos = vecSize - one
 
+gridQuarterCircle :: Grid String
+gridQuarterCircle = Grid.fill
+  size
+  (remap >>> drawCircle)
+
+  where
+  size = Size $ Vec 10 8
+  remap = norm size
+
+  drawCircle vec@(Vec x y) =
+    let
+      diff = acos x - asin y
+    in
+      if diff < 0.0 then
+        "O"
+      else if diff < 0.1 then
+        "o"
+      else "."
+
+-- ```text
+-- > log $ Grid.printGrid_ gridQuarterCircle
+-- . . . . . . . . . o
+-- . . . . . . . . . O
+-- . . . . . . . . . O
+-- . . . . . . . . o O
+-- . . . . . . . o O O
+-- . . . . . . o O O O
+-- . . . . o O O O O O
+-- o O O O O O O O O O
+-- ```
+
+gridHalfCircle :: Grid String
+gridHalfCircle = Grid.mirrorY gridQuarterCircle `Grid.appendX` gridQuarterCircle
+
+-- ```text
+-- > log $ Grid.printGrid_ $ gridHalfCircle
+-- o . . . . . . . . . . . . . . . . . . o
+-- O . . . . . . . . . . . . . . . . . . O
+-- O . . . . . . . . . . . . . . . . . . O
+-- O o . . . . . . . . . . . . . . . . o O
+-- O O o . . . . . . . . . . . . . . o O O
+-- O O O o . . . . . . . . . . . . o O O O
+-- O O O O O o . . . . . . . . o O O O O O
+-- O O O O O O O O O o o O O O O O O O O O
+-- ```
+
+gridFullCircle :: Grid String
+gridFullCircle = Grid.mirrorX gridHalfCircle `Grid.appendY` gridHalfCircle
+
+-- ```text
+-- > log $ Grid.printGrid_ $ gridFullCircle 
+-- O O O O O O O O O o o O O O O O O O O O
+-- O O O O O o . . . . . . . . o O O O O O
+-- O O O o . . . . . . . . . . . . o O O O
+-- O O o . . . . . . . . . . . . . . o O O
+-- O o . . . . . . . . . . . . . . . . o O
+-- O . . . . . . . . . . . . . . . . . . O
+-- O . . . . . . . . . . . . . . . . . . O
+-- o . . . . . . . . . . . . . . . . . . o
+-- o . . . . . . . . . . . . . . . . . . o
+-- O . . . . . . . . . . . . . . . . . . O
+-- O . . . . . . . . . . . . . . . . . . O
+-- O o . . . . . . . . . . . . . . . . o O
+-- O O o . . . . . . . . . . . . . . o O O
+-- O O O o . . . . . . . . . . . . o O O O
+-- O O O O O o . . . . . . . . o O O O O O
+-- O O O O O O O O O o o O O O O O O O O O
+-- ```
 
 -- [API Docs]: https://pursuit.purescript.org/packages/purescript-grid
-
