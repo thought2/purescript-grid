@@ -142,7 +142,7 @@ gridD = Grid.fill (Size $ Vec 8 6) (\_ -> '*')
 ```
 ```hs
 gridE :: Grid Char
-gridE = Grid.trySetCell (Pos $ Vec 2 3) 'A' gridD
+gridE = Grid.setCellTry (Pos $ Vec 2 3) 'A' gridD
 ```
 ```text
 > log $ printGrid_ $ StrC.singleton <$> gridE
@@ -161,7 +161,7 @@ gridF = Grid.fromArraysConform
   ]
 
 gridG :: Grid Char
-gridG = Grid.trySetSubGrid (Pos $ Vec 1 2) gridF gridD
+gridG = Grid.setSubGridTry (Pos $ Vec 1 2) gridF gridD
 ```
 ```text
 > log $ printGrid_ $ StrC.singleton <$> gridG 

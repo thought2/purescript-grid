@@ -89,12 +89,12 @@ gridB' = Grid.fromArraysConform
 -- ```
 --
 -- The printer also works if the strings in the cells have different lengths.
--- Here we generate a Grid based on the position of each cell by using the `fill` function:
+-- Here we generate a Grid based on the position of each cell by using the `fillTry` function:
 
 gridC :: Grid String
-gridC = Grid.fill (Size $ Vec 4 5) fillFn
+gridC = Grid.fillTry (Size $ Vec 4 5) fillTryFn
   where
-  fillFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
+  fillTryFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
 
 -- And print it using the defaults:
 -- ```text
@@ -127,7 +127,7 @@ printOpts = Grid.defaultPrintOpts
 -- 
 
 gridD :: Grid Char
-gridD = Grid.fill (Size $ Vec 8 6) (\_ -> '*')
+gridD = Grid.fillTry (Size $ Vec 8 6) (\_ -> '*')
 
 -- ```text
 -- > import Data.String.CodeUnits as StrC
@@ -141,7 +141,7 @@ gridD = Grid.fill (Size $ Vec 8 6) (\_ -> '*')
 -- ```
 
 gridE :: Grid Char
-gridE = Grid.trySetCell (Pos $ Vec 2 3) 'A' gridD
+gridE = Grid.setCellTry (Pos $ Vec 2 3) 'A' gridD
 
 -- ```text
 -- > log $ printGrid_ $ StrC.singleton <$> gridE
@@ -160,7 +160,7 @@ gridF = Grid.fromArraysConform
   ]
 
 gridG :: Grid Char
-gridG = Grid.trySetSubGrid (Pos $ Vec 1 2) gridF gridD
+gridG = Grid.setSubGridTry (Pos $ Vec 1 2) gridF gridD
 
 -- ```text
 -- > log $ printGrid_ $ StrC.singleton <$> gridG 
@@ -205,7 +205,7 @@ norm (Size vecSize) (Pos vecPos) =
   maxPos = vecSize - one
 
 gridQuarterCircle :: Grid String
-gridQuarterCircle = Grid.fill
+gridQuarterCircle = Grid.fillTry
   size
   (remap >>> drawCircle)
 

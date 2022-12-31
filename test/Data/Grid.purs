@@ -12,12 +12,13 @@ import Data.Grid as G
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (unwrap)
 import Data.String as Str
-import Data.Traversable (minimum)
+import Data.Traversable (and, minimum)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Data.Unfoldable (replicateA)
 import Effect.Aff (Aff)
 import Partial.Unsafe (unsafePartial)
-import Test.QuickCheck (class Testable, Result, (<?>))
+import Test.QuickCheck (class Arbitrary, class Testable, Result, (<?>))
 import Test.QuickCheck.Gen (Gen)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -60,9 +61,10 @@ spec =
               G.fromArraysConform [ [ 'A' ] ]
 
       describe "fill" do
-        it "succeeds with a valid size" do
-          G.fill (Size $ Vec 2 3)
-            (\(Pos (Vec x y)) -> show x <> "-" <> show y)
+        let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
+
+        it "returns a correct grid when a valid size was given" do
+          G.fill (Size $ Vec 2 3) fillFn
             `shouldEqual`
               do
                 Just $ G.fromArraysConform
@@ -70,95 +72,60 @@ spec =
                   , [ "0-1", "1-1" ]
                   , [ "0-2", "1-2" ]
                   ]
-        it "fails with an invalid size" do
-          G.fill (Size $ Vec (-1) 3)
-            (\(Pos (Vec x y)) -> show x <> "-" <> show y)
-            `shouldEqual`
-              do
-                Nothing
 
-      -- describe "test matrix" do
-      --   let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
-      --   testFrequency
-      --     { fn: \size -> G.fill size fillFn
-      --     , inputs: sample (mkSeed 0) 100 genSize
-      --     , cases: do
-      --         case_ "valid size"
-      --           { freq: 20
-      --           , pred: sizeIsValid
-      --           , test: \size result -> do
-      --               it "has the given size" do
-      --                 (G.size <$> result) `shouldEqual` (Just size)
-      --               it "each cell has the correct value" do
-      --                 do
-      --                   result
-      --                     <#> (G.toUnfoldable :: _ -> Array _)
-      --                       >>> map (\(Tuple k v) -> fillFn k == v)
-      --                       >>> and
-      --                   `shouldEqual` (Just true)
-      --           }
+        it "fails when an invalid size was given" do
+          quickCheck \(Invalid size) ->
+            F1 (\x -> G.fill x fillFn) size
+              `testF1` Nothing
 
-      --         case_ "invalid size"
-      --           { freq: 20
-      --           , pred: not <<< sizeIsValid
-      --           , test: \_ result -> do
-      --               it "fails" do
-      --                 result `shouldEqual` Nothing
-      --           }
+        it "returns a grid of the size that was given" do
+          quickCheck \(Valid size) ->
+            F1 (\x -> G.size <$> G.fill x fillFn) size
+              `testF1` Just size
 
-      --     }
+        it "returns a grid with the correct value in each cell when given a valid size" do
+          quickCheck \(Valid size) ->
+            F1
+              ( \x -> G.fill x fillFn
+                  <#> (G.toUnfoldable :: _ -> Array _)
+                    >>> map (\(Tuple k v) -> fillFn k == v)
+                    >>> and
+              )
+              size
+              `testF1` Just true
 
       describe "fillTry" do
+        let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
+
         it "succeeds for a valid size" do
-          G.fillTry (Size $ Vec 2 3)
-            (\(Pos (Vec x y)) -> show x <> "-" <> show y)
+          G.fillTry (Size $ Vec 2 3) fillFn
             `shouldEqual`
               G.fromArraysConform
                 [ [ "0-0", "1-0" ]
                 , [ "0-1", "1-1" ]
                 , [ "0-2", "1-2" ]
                 ]
-        it "succeeds with an empty grid for an invalid size" do
-          G.fillTry (Size $ Vec (-1) 3)
-            (\(Pos (Vec x y)) -> show x <> "-" <> show y)
-            `shouldEqual`
-              G.fromArraysConform []
 
-      -- describe "test matrix" do
-      --   let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
+        it "returns an empty grid for a given invalid size" do
+          quickCheck \(Invalid size) ->
+            F1
+              (\x -> G.fillTry x fillFn)
+              size
+              `testF1` (G.fromArraysConform [])
 
-      --   testFrequency
-      --     { fn: \size -> G.fillTry size fillFn
-      --     , inputs: sample (mkSeed 0) 100 genSize
-      --     , cases: do
-      --         case_ "valid size"
-      --           { freq: 20
-      --           , pred: sizeIsValid
-      --           , test: \size result -> do
-      --               it "has the given size" do
-      --                 (G.size $ result) `shouldEqual` size
-      --               it "each cell has the correct value" do
-      --                 do
-      --                   result
-      --                     # (G.toUnfoldable :: _ -> Array _)
-      --                         >>> map (\(Tuple k v) -> fillFn k == v)
-      --                         >>> and
-      --                   `shouldEqual` true
-      --           }
-
-      --         case_ "invalid size"
-      --           { freq: 20
-      --           , pred: not <<< sizeIsValid
-      --           , test: \_ result -> do
-      --               it "returns an empty grid" do
-      --                 result `shouldEqual` (G.fromArraysConform [])
-
-      --           }
-
-      --     }
+        it "returns a grid with the correct value in each cell when given a valid size" do
+          quickCheck \(Valid size) ->
+            F1
+              ( \x -> G.fillTry x fillFn
+                  # (G.toUnfoldable :: _ -> Array _)
+                      >>> map (\(Tuple k v) -> fillFn k == v)
+                      >>> and
+              )
+              size
+              `testF1` true
 
       describe "fromArrays" do
-        it "succeeds for a valid size and matching arrays" do
+        it "returns a correct grid when given a valid size and matching arrays" do
           G.fromArrays (Size $ Vec 2 2) [ [ 1, 2 ], [ 3, 4 ] ]
             `shouldEqual`
               do
@@ -167,43 +134,33 @@ spec =
                   , [ 3, 4 ]
                   ]
 
-        it "fails for an invalid size" do
+        it "fails when given an invalid size" do
           G.fromArrays (Size $ Vec (-1) 3) [ [ 1, 2 ], [ 3, 4 ] ]
-            `shouldEqual`
-              Nothing
+            `shouldEqual` Nothing
 
-        it "fails for non matching arrays" do
+        it "fails when given arrays that don't match to the size" do
           G.fromArrays (Size $ Vec 2 2) [ [ 1 ], [ 3, 4 ] ]
-            `shouldEqual`
-              Nothing
+            `shouldEqual` Nothing
 
-        describe "fuzzy" do
-          it "fails with invalid size" do
-            quickCheck_ do
-              size <- genInvalidSize
-              xs <- gen2dArray
-              pure $ (F2 G.fromArrays size xs) `testF2` (_ == Nothing)
+        it "fails when given an invalid size" do
+          quickCheck \(Invalid size) (Any (Array2d xs)) ->
+            F2 G.fromArrays size xs
+              `testF2` Nothing
 
-          it "fails with invalid arrays" do
-            quickCheck_ do
-              size <- genSize
-              xs <- genInvalid2dArray
-              pure $ (F2 G.fromArrays size xs) `testF2` (_ == Nothing)
+        it "fails when given invalid arrays" do
+          quickCheck \(Any size) (Invalid (Array2d xs)) ->
+            F2 G.fromArrays size xs
+              `testF2` Nothing
 
-          it "fails with valid size and valid arrays, but not matching" do
-            quickCheck_ do
-              size <- genValidSize
-              xs <- genValidSize
-                <#> maybeBool (_ /= size)
-                # filtered
-                >>= genValid2dArrayOfSize
-              pure $ (F2 G.fromArrays size xs) `testF2` (_ == Nothing)
+        it "fails when given a valid size and valid arrays which don't match the size" do
+          quickCheck \(Invalid (Tuple size (Array2d xs))) ->
+            F2 G.fromArrays size xs
+              `testF2` Nothing
 
-          it "succeeds with valid size and valid arrays, matching" do
-            quickCheck_ do
-              size <- genValidSize
-              xs <- pure size >>= genValid2dArrayOfSize
-              pure $ (F2 G.fromArrays size xs) `testF2` (\r -> (G.size <$> r) == Just size)
+        it "returns a grid of the given valid size and arrays which match the size" do
+          quickCheck \(Valid (Tuple size (Array2d xs))) ->
+            F2 (\x1 x2 -> G.size <$> G.fromArrays x1 x2) size xs
+              `testF2` Just size
 
       describe "fromArraysConform" do
         it "succeeds for valid arrays" do
@@ -238,21 +195,16 @@ spec =
         it "succeds with an adjusted grid" do
           quickCheck_ do
             xs <- genInvalid2dArray
-            pure $ (F1 G.fromArraysConform xs) `testF1`
-              ( \r ->
-                  G.size r ==
-                    ( Size $ Vec
-                        (xs <#> Arr.length # minimum # fromMaybe 0)
-                        (Arr.length xs)
-                    )
+            pure $ (F1 (G.size <<< G.fromArraysConform) xs) `testF1`
+              ( Size $ Vec
+                  (xs <#> Arr.length # minimum # fromMaybe 0)
+                  (Arr.length xs)
               )
         it "b" do
           quickCheck_ do
             xs <- genValid2dArray
-            pure $ (F1 G.fromArraysConform xs) `testF1`
-              ( \r ->
-                  G.toArrays r == xs
-              )
+            pure $ (F1 (G.toArrays <<< G.fromArraysConform) xs) `testF1`
+              xs
 
       describe "fromArraysPartial" do
         it "works for a simple example" do
@@ -686,10 +638,10 @@ testF2
   => Show b
   => Show z
   => F2 a b z
-  -> (z -> Boolean)
+  -> z
   -> Result
-testF2 (F2 f x1 x2) pred = pred ret <?> show
-  { x1, x2, ret }
+testF2 (F2 f x1 x2) exp = ret == exp <?> show
+  { x1, x2, ret, exp }
   where
   ret = f x1 x2
 
@@ -699,12 +651,68 @@ testF1
   => Show a
   => Show z
   => F1 a z
-  -> (z -> Boolean)
+  -> z
   -> Result
-testF1 (F1 f x1) pred = pred ret <?> show
-  { x1, ret }
+testF1 (F1 f x1) exp = ret == exp <?> show
+  { x1, ret, exp }
   where
   ret = f x1
 
 quickCheck_ :: forall a. Testable a => Gen a -> Aff Unit
 quickCheck_ = quickCheck
+
+--------------------------------------------------------------------------------
+--- Invalid
+--------------------------------------------------------------------------------
+
+newtype Invalid a = Invalid a
+
+instance Arbitrary (Invalid Size) where
+  arbitrary = Invalid <$> genInvalidSize
+
+instance Arbitrary (Invalid Array2d) where
+  arbitrary = Invalid <<< Array2d <$> genInvalid2dArray
+
+instance Arbitrary (Invalid (Tuple Size Array2d)) where
+  arbitrary = do
+    size <- genValidSize
+    xs <- genValidSize
+      <#> maybeBool (_ /= size)
+      # filtered
+      >>= genValid2dArrayOfSize
+    pure $ Invalid (Tuple size (Array2d xs))
+
+--------------------------------------------------------------------------------
+--- Valid
+--------------------------------------------------------------------------------
+
+newtype Valid a = Valid a
+
+instance Arbitrary (Valid Size) where
+  arbitrary = Valid <$> genValidSize
+
+instance Arbitrary (Valid Array2d) where
+  arbitrary = Valid <<< Array2d <$> genValid2dArray
+
+instance Arbitrary (Valid (Tuple Size Array2d)) where
+  arbitrary = do
+    size <- genValidSize
+    xs <- pure size >>= genValid2dArrayOfSize
+    pure $ Valid (Tuple size (Array2d xs))
+
+--------------------------------------------------------------------------------
+--- Any
+--------------------------------------------------------------------------------
+
+newtype Any a = Any a
+
+instance Arbitrary (Any Size) where
+  arbitrary = Any <$> genSize
+
+instance Arbitrary (Any Array2d) where
+  arbitrary = Any <<< Array2d <$> gen2dArray
+
+---
+
+newtype Array2d = Array2d (Array (Array Int))
+
