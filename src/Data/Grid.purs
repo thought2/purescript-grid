@@ -456,13 +456,13 @@ mkGrid = fromArraysPartial
 -- | ```
 
 fromFoldable :: forall a f. Foldable f => Size -> f (Tuple Pos a) -> Maybe (Grid a)
-fromFoldable unsafeSize xs = ado
-  checkPositions
-  in UnsafeGrid newSize newMap
+fromFoldable givenSize xs = do
+  guard $ sizeIsValid givenSize
+  checkPositions givenSize
+  pure $ UnsafeGrid givenSize newMap
   where
-  newSize = sizeNormalize unsafeSize
   newMap = Map.fromFoldable xs
-  checkPositions = positionsFromSize newSize
+  checkPositions size' = positionsFromSize size'
     # traverse_ (\pos -> void $ Map.lookup pos newMap)
 
 -- TODO: fromArray :: forall a. Size -> Array a -> Maybe (Grid a)
