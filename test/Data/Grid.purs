@@ -2,17 +2,15 @@ module Test.Data.Grid (spec) where
 
 import Prelude
 
-import Control.Monad.Gen (class MonadGen, choose, chooseInt, filtered, oneOf)
-import Control.Monad.Rec.Class (class MonadRec)
+import Control.Monad.Gen (choose, chooseInt, filtered, oneOf)
 import Data.Array as Arr
-import Data.Array.NonEmpty (NonEmptyArray)
 import Data.Array.NonEmpty as NEA
 import Data.Filterable (maybeBool)
 import Data.Generic.Rep (class Generic)
 import Data.Grid (Pos(..), Size(..), Vec(..))
 import Data.Grid as G
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Newtype (unwrap)
+import Data.Newtype (class Newtype, un, unwrap)
 import Data.Show.Generic (genericShow)
 import Data.String as Str
 import Data.Traversable (and, minimum)
@@ -20,8 +18,8 @@ import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Data.Unfoldable (replicateA)
 import Effect.Aff (Aff)
-import Partial.Unsafe (unsafeCrashWith, unsafePartial)
-import Test.QuickCheck (class Arbitrary, class Testable, Result, (<?>))
+import Partial.Unsafe (unsafePartial)
+import Test.QuickCheck (class Arbitrary, Result, arbitrary, (<?>))
 import Test.QuickCheck.Gen (Gen)
 import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
@@ -540,172 +538,66 @@ spec = do
             `shouldEqual` ".....Hello"
 
 --------------------------------------------------------------------------------
---- 
+--- Util
 --------------------------------------------------------------------------------
 runPartial :: forall a. (Unit -> Partial => a) -> Aff a
 runPartial p = pure unit >>= \_ -> pure $ unsafePartial $ p unit
 
 --------------------------------------------------------------------------------
---- 
---------------------------------------------------------------------------------
-
-sizeIsValid :: Size -> Boolean
-sizeIsValid (Size (Vec 0 0)) = true
-sizeIsValid (Size (Vec x y)) | x >= 1 && y >= 1 = true
-sizeIsValid _ = false
-
---------------------------------------------------------------------------------
 --- Gen
 --------------------------------------------------------------------------------
-
-gen2dArray :: forall m. MonadGen m => MonadRec m => m (Array (Array Int))
-gen2dArray = choose genValid2dArray genInvalid2dArray
-
-genValid2dArray :: forall m. MonadGen m => m (Array (Array Int))
-genValid2dArray = do
-  size <- genValidSize
-  genValid2dArrayOfSize size
-
-genValid2dArrayOfSize :: forall m. MonadGen m => Size -> m (Array (Array Int))
-genValid2dArrayOfSize (Size (Vec width height)) = do
-  replicateA height (pure width >>= genLine)
-
-genInvalid2dArray :: forall m. MonadGen m => MonadRec m => m (Array (Array Int))
-genInvalid2dArray =
-  do
-    height <- genPosInt
-    replicateA height (genPosInt >>= genLine)
-    <#> maybeBool (not <<< allSameLength)
-    # filtered
-
-allSameLength :: forall a. Array (Array a) -> Boolean
-allSameLength xs = xs <#> Arr.length # Arr.nubEq # Arr.length # (_ == 1)
-
-genLine :: forall m. MonadGen m => Int -> m (Array Int)
-genLine w = do
-  --w' <- choose (pure w) (chooseInt 0 w)
-  replicateA w (pure 0)
-
-genSize :: forall m. MonadGen m => MonadRec m => m Size
-genSize = choose genValidSize genInvalidSize
-
-genValidSize :: forall m. MonadGen m => m Size
-genValidSize =
-  NEA.cons'
-    (G.Vec <$> genPosInt <*> genPosInt)
-    (pure <$> [ G.Vec 0 0 ])
-    # oneOf
-    <#> G.Size
-
-genInvalidSize :: forall m. MonadGen m => MonadRec m => m Size
-genInvalidSize =
-  NEA.cons'
-    (G.Vec <$> genNegInt <*> genNegInt)
-    [ G.Vec <$> genNegInt <*> genPosInt
-    , G.Vec <$> genPosInt <*> genNegInt
-    , pure $ G.Vec 1 0
-    , pure $ G.Vec 0 1
-    ]
-    # oneOf
-    <#> G.Size
 
 max :: Int
 max = 10
 
-genNegInt :: forall m. MonadGen m => m Int
-genNegInt =
-  NEA.cons'
-    (chooseInt (-max) (-3))
-    (pure <$> [ -2, -1 ])
-    # oneOf
+genValid2dArray :: Valid Size -> Gen (Array (Array Int))
+genValid2dArray (Valid (Size (Vec width height))) = do
+  replicateA height (pure width >>= genLine)
 
-genPosInt :: forall m. MonadGen m => m Int
-genPosInt =
-  NEA.cons'
-    (chooseInt max 3)
-    (pure <$> [ 2, 1 ])
-    # oneOf
+allSameLength :: forall a. Array (Array a) -> Boolean
+allSameLength xs =
+  xs <#> Arr.length # Arr.nubEq # Arr.length # (_ == 1)
 
-removeValues :: forall a m. MonadGen m => MonadRec m => (a -> Boolean) -> m a -> m a
-removeValues pred ma = ma
-  <#> (\x -> if pred x then Nothing else Just x)
-  # filtered
+genLine :: Int -> Gen (Array Int)
+genLine w = replicateA w (pure 0)
 
-genEdgeInt :: forall m. MonadGen m => m Int
-genEdgeInt =
-  oneOf
-    $ NEA.cons' (chooseInt 0 100)
-    $ pure <$> [ -2, -1, 0, 1, 2 ]
+genNegInt :: Gen Int
+genNegInt = oneOf $ NEA.cons'
+  (chooseInt (-max) (-3))
+  [ pure (-2)
+  , pure (-1)
+  ]
 
-genEdgeIntPositive :: forall m. MonadGen m => m Int
-genEdgeIntPositive =
-  oneOf
-    $ NEA.cons' (chooseInt 0 100)
-    $ pure <$> [ 0, 1, 2, 3, 4 ]
-
----
-
-genValidEntry :: Gen (Tuple Pos Int)
-genValidEntry = Tuple <$> genValidPos <*> pure 0
-
-genInvalidEntry :: Gen (Tuple Pos Int)
-genInvalidEntry = Tuple <$> genInvalidPos <*> pure 0
-
--- genValidEntryOfSize :: Size -> Gen (Tuple Pos Int)
--- genValidEntryOfSize = Tuple <$> genInvalidPos <*> pure 0
-
-genValidPos :: Gen Pos
-genValidPos = Pos <$> (Vec <$> genPosInt0 <*> genPosInt0)
-
-genValidPosOfSize :: Size -> Gen Pos
-genValidPosOfSize (Size (Vec w h)) = Pos <$>
-  (Vec <$> chooseInt 0 (w - 1) <*> chooseInt 0 (h - 1))
-
-genInvalidPos :: Gen Pos
-genInvalidPos = Pos <$>
-  (Vec <$> genNegInt <*> genNegInt)
-    `choose` (Vec <$> genNegInt <*> genPosInt0)
-    `choose` (Vec <$> genPosInt0 <*> genNegInt)
-
---genInvalidPos' :: Gen Pos
-genInvalidPos' :: Gen Pos
-genInvalidPos' = map Pos
-  $ oneOf
-  $ NEA.cons'
-      (Vec <$> genNegInt <*> genNegInt)
-      [ Vec <$> genNegInt <*> genPosInt0
-      , Vec <$> genPosInt0 <*> genNegInt
-      ]
-
-oneOf' :: Partial => forall a. Array (Gen a) -> Gen a
-oneOf' = nea >>> oneOf
-
-genInt :: Gen Int
-genInt = genNegInt `choose` genPosInt0
+genPosInt :: Gen Int
+genPosInt = oneOf $ NEA.cons'
+  (chooseInt max 3)
+  [ pure 2
+  , pure 1
+  ]
 
 genPosInt0 :: Gen Int
-genPosInt0 =
-  NEA.cons'
-    (chooseInt max 3)
-    (pure <$> [ 2, 1, 0 ])
-    # oneOf
-
-genPosInt0' :: Gen Int
-genPosInt0' = oneOf $ NEA.cons'
+genPosInt0 = oneOf $ NEA.cons'
   (chooseInt max 3)
   [ pure 2
   , pure 1
   , pure 0
   ]
 
----
+genValidEntry :: Gen (Tuple Pos Int)
+genValidEntry = Tuple <$> (un Valid <$> arbitrary) <*> pure 0
 
-nea :: Partial => forall a. Array a -> NonEmptyArray a
-nea xs = case NEA.fromArray xs of
-  Nothing -> unsafeCrashWith "array empty!"
-  Just x -> x
+genInvalidEntry :: Gen (Tuple Pos Int)
+genInvalidEntry = Tuple <$> (un Invalid <$> arbitrary) <*> pure 0
 
-data F3 a b c z = F3 (a -> b -> c -> z) a b c
+genValidPos :: Valid Size -> Gen Pos
+genValidPos (Valid (Size (Vec w h))) = Pos <$>
+  (Vec <$> chooseInt 0 (w - 1) <*> chooseInt 0 (h - 1))
+
+--------------------------------------------------------------------------------
+--- FnWithArgs
+--------------------------------------------------------------------------------
+
+data FnWithArgs3 a b c z = F3 (a -> b -> c -> z) a b c
 
 data FnWithArgs2 a b z = FnWithArgs2 (a -> b -> z) a b
 
@@ -717,9 +609,7 @@ shouldEvalTo2
   => Show a
   => Show b
   => Show z
-  => FnWithArgs2 a b z
-  -> z
-  -> Result
+  => (FnWithArgs2 a b z -> z -> Result)
 shouldEvalTo2 (FnWithArgs2 f x1 x2) exp = ret == exp <?> show
   { x1, x2, ret, exp }
   where
@@ -730,16 +620,11 @@ shouldEvalTo1
    . Eq z
   => Show a
   => Show z
-  => FnWithArgs1 a z
-  -> z
-  -> Result
+  => (FnWithArgs1 a z -> z -> Result)
 shouldEvalTo1 (FnWithArgs1 f x1) exp = ret == exp <?> show
   { x1, ret, exp }
   where
   ret = f x1
-
-quickCheck_ :: forall a. Testable a => Gen a -> Aff Unit
-quickCheck_ = quickCheck
 
 --------------------------------------------------------------------------------
 --- Invalid
@@ -749,24 +634,50 @@ newtype Invalid a = Invalid a
 
 derive instance Generic (Invalid a) _
 
+derive instance Newtype (Invalid a) _
+
 derive instance Eq a => Eq (Invalid a)
 
 instance Show a => Show (Invalid a) where
   show = genericShow
 
 instance Arbitrary (Invalid Size) where
-  arbitrary = Invalid <$> genInvalidSize
+  arbitrary =
+    NEA.cons'
+      (G.Vec <$> genNegInt <*> genNegInt)
+      [ G.Vec <$> genNegInt <*> genPosInt
+      , G.Vec <$> genPosInt <*> genNegInt
+      , pure $ G.Vec 1 0
+      , pure $ G.Vec 0 1
+      ]
+      # oneOf
+      <#> G.Size >>> Invalid
+
+instance Arbitrary (Invalid Pos) where
+  arbitrary = map (Invalid <<< Pos)
+    $ oneOf
+    $ NEA.cons'
+        (Vec <$> genNegInt <*> genNegInt)
+        [ Vec <$> genNegInt <*> genPosInt0
+        , Vec <$> genPosInt0 <*> genNegInt
+        ]
 
 instance Arbitrary (Invalid Array2d) where
-  arbitrary = Invalid <<< Array2d <$> genInvalid2dArray
+  arbitrary =
+    do
+      height <- genPosInt
+      replicateA height (genPosInt >>= genLine)
+      <#> maybeBool (not <<< allSameLength)
+      # filtered
+      <#> Invalid <<< Array2d
 
 instance Arbitrary (Invalid (Tuple Size Array2d)) where
   arbitrary = do
-    size <- genValidSize
-    xs <- genValidSize
-      <#> maybeBool (_ /= size)
+    validSize@(Valid size) <- arbitrary
+    xs <- arbitrary
+      <#> maybeBool (_ /= validSize)
       # filtered
-      >>= genValid2dArrayOfSize
+      >>= genValid2dArray
     pure $ Invalid (Tuple size (Array2d xs))
 
 instance Arbitrary (Invalid Entries) where
@@ -782,21 +693,35 @@ newtype Valid a = Valid a
 
 derive instance Generic (Valid a) _
 
+derive instance Newtype (Valid a) _
+
 derive instance Eq a => Eq (Valid a)
 
 instance Show a => Show (Valid a) where
   show = genericShow
 
 instance Arbitrary (Valid Size) where
-  arbitrary = Valid <$> genValidSize
+  arbitrary =
+    NEA.cons'
+      (G.Vec <$> genPosInt <*> genPosInt)
+      (pure <$> [ G.Vec 0 0 ])
+      # oneOf
+      <#> G.Size >>> Valid
+
+instance Arbitrary (Valid Pos) where
+  arbitrary = Valid <<< Pos <$> (Vec <$> genPosInt0 <*> genPosInt0)
 
 instance Arbitrary (Valid Array2d) where
-  arbitrary = Valid <<< Array2d <$> genValid2dArray
+  arbitrary =
+    do
+      validSize <- arbitrary
+      genValid2dArray validSize
+      <#> Valid <<< Array2d
 
 instance Arbitrary (Valid (Tuple Size Array2d)) where
   arbitrary = do
-    size <- genValidSize
-    xs <- pure size >>= genValid2dArrayOfSize
+    validSize@(Valid size) <- arbitrary
+    xs <- pure validSize >>= genValid2dArray
     pure $ Valid (Tuple size (Array2d xs))
 
 instance Arbitrary (Valid Entries) where
@@ -807,11 +732,6 @@ instance Arbitrary (Valid Entries) where
 instance Arbitrary (Valid (Tuple Size Entries)) where
   arbitrary = unsafeCoerce 1
 
--- do
--- size <- genValidSize
--- xs <- pure size >>= genValid2dArrayOfSize
--- pure $ Valid (Tuple size (Array2d xs))
-
 --------------------------------------------------------------------------------
 --- Any
 --------------------------------------------------------------------------------
@@ -820,16 +740,22 @@ newtype Any a = Any a
 
 derive instance Generic (Any a) _
 
+derive instance Newtype (Any a) _
+
 derive instance Eq a => Eq (Any a)
 
 instance Show a => Show (Any a) where
   show = genericShow
 
 instance Arbitrary (Any Size) where
-  arbitrary = Any <$> genSize
+  arbitrary = Any <$> choose
+    (un Valid <$> arbitrary)
+    (un Invalid <$> arbitrary)
 
 instance Arbitrary (Any Array2d) where
-  arbitrary = Any <<< Array2d <$> gen2dArray
+  arbitrary = Any <$> choose
+    (un Valid <$> arbitrary)
+    (un Invalid <$> arbitrary)
 
 instance Arbitrary (Any Entries) where
   arbitrary = do
@@ -837,7 +763,9 @@ instance Arbitrary (Any Entries) where
     Any <<< Entries <$>
       (replicateA len (genValidEntry `choose` genInvalidEntry))
 
----
+--------------------------------------------------------------------------------
+--- Array2d
+--------------------------------------------------------------------------------
 
 newtype Array2d = Array2d (Array (Array Int))
 
@@ -848,7 +776,9 @@ derive instance Eq Array2d
 instance Show Array2d where
   show = genericShow
 
----
+--------------------------------------------------------------------------------
+--- Entries
+--------------------------------------------------------------------------------
 
 newtype Entries = Entries (Array (Tuple Pos Int))
 
