@@ -19,6 +19,7 @@ module Test.Data.Grid
 import Prelude
 
 import Control.Monad.Gen (choose, chooseInt, filtered, oneOf)
+import Data.Array (mapWithIndex)
 import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
 import Data.Filterable (maybeBool)
@@ -83,7 +84,7 @@ spec = do
 
       describe "fill" do
 
-        it "returns a correct grid when a valid size was given" do
+        it "returns a correct grid when a valid size (1) was given" do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           G.fill (Size $ Vec 2 3) fillFn
@@ -95,19 +96,19 @@ spec = do
                   , [ "0-2", "1-2" ]
                   ]
 
-        it "fails when an invalid size was given" do
+        it "fails when an invalid size (1) was given" do
           quickCheck \(Invalid size) ->
             FnWithArgs1 (\x -> G.fill x (const 0)) size
               `shouldEvalTo1` Nothing
 
-        it "returns a grid of the size that was given" do
+        it "returns a grid of the size (1) that was given" do
           quickCheck \(Valid size) ->
             ( FnWithArgs1 (\x -> G.fill x (const 0)) size
                 <#> map G.size
             )
               `shouldEvalTo1` Just size
 
-        it "returns a grid with the correct value in each cell when given a valid size" do
+        it "returns a grid with the correct value in each cell when given a valid size (1)" do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           quickCheck \(Valid size) ->
@@ -121,7 +122,7 @@ spec = do
               `shouldEvalTo1` Just true
 
       describe "fillTry" do
-        it "succeeds for a valid size" do
+        it "succeeds for a valid size (1)" do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           G.fillTry (Size $ Vec 2 3) fillFn
@@ -161,7 +162,7 @@ spec = do
                   ]
               )
 
-        it "fails when given an invalid size (1) and correct arrays (2)" do
+        it "fails when given an invalid size (1) and valid arrays (2)" do
           G.fromArrays (Size $ Vec (-1) 3) [ [ 1, 2 ], [ 3, 4 ] ]
             `shouldEqual` Nothing
 
@@ -179,18 +180,18 @@ spec = do
             FnWithArgs2 G.fromArrays size xs
               `shouldEvalTo2` Nothing
 
-        it "fails when given a valid size (1) and valid arrays (2) which don't match the size" do
-          quickCheck \(Invalid (Tuple size (Array2d xs))) ->
+        it "fails when given an invalid pair of size (1) and arrays (2)" do
+          quickCheck \(Invalid (Tuple (Valid size) (Valid (Array2d xs)))) ->
             FnWithArgs2 G.fromArrays size xs
               `shouldEvalTo2` Nothing
 
-        it "returns a grid of the given valid size (1) and the given arrays (2) which match the size" do
+        it "returns a grid of the given a valid combination of size (1) arrays (2)" do
           quickCheck \(Valid (Tuple size (Array2d xs))) ->
             FnWithArgs2 (\x1 x2 -> G.size <$> G.fromArrays x1 x2) size xs
               `shouldEvalTo2` Just size
 
       describe "fromArraysConform" do
-        it "succeeds for valid arrays" do
+        it "succeeds for valid arrays (1)" do
           G.fromArraysConform
             [ [ "0-0", "1-0" ]
             , [ "0-1", "1-1" ]
@@ -204,7 +205,7 @@ spec = do
                   ]
               )
 
-        it "succeeds for invalid arrays" do
+        it "succeeds for invalid arrays (1)" do
           G.fromArraysConform
             [ [ "0-0", "1-0" ]
             , [ "0-1" ]
@@ -218,7 +219,7 @@ spec = do
                   ]
               )
 
-        it "returns an adjusted grid" do
+        it "returns an adjusted grid when invalid arrays (1) are given" do
           quickCheck \(Invalid (Array2d xs)) ->
             FnWithArgs1 (G.fromArraysConform >>> G.size) xs
               `shouldEvalTo1`
@@ -229,7 +230,7 @@ spec = do
                     Size $ Vec w h
                 )
 
-        it "returns an adjusted grid" do
+        it "returns an grid equivalent to the given arrays (1)" do
           quickCheck \(Valid (Array2d xs)) ->
             ( FnWithArgs1 G.fromArraysConform xs
                 <#> G.toArrays
@@ -305,11 +306,18 @@ spec = do
               `shouldEvalTo2` Nothing
 
         it "fails when any size (1) and invalid entries (2) are given" do
-          quickCheck \(Invalid size) (Invalid (Entries xs)) ->
+          quickCheck \(Any size) (Invalid (Entries xs)) ->
             FnWithArgs2 G.fromFoldable size xs
               `shouldEvalTo2` Nothing
 
-        it "returns a grid when a valid size (1) and entries (2) are given that match the size" do
+        it "returns a grid when an invalid combination of size (1) and entries (2) are given" do
+          quickCheck \(Invalid (Tuple (Valid size) (Valid (Entries xs)))) ->
+            ( FnWithArgs2 G.fromFoldable size xs
+                <#> map G.size
+            )
+              `shouldEvalTo2` Nothing
+
+        it "returns a grid when a valid combination of size (1) and entries (2) are given" do
           quickCheck \(Valid (Tuple size (Entries xs))) ->
             ( FnWithArgs2 G.fromFoldable size xs
                 <#> map G.size
@@ -599,11 +607,14 @@ shouldEvalTo2
   => Show b
   => Show z
   => (FnWithArgs2 a b z -> z -> Result)
-shouldEvalTo2 (FnWithArgs2 f x1 x2) exp =
-  ret == exp <?> show
-    { x1, x2, ret, exp }
+shouldEvalTo2 (FnWithArgs2 f x1 x2) expected =
+  actual == expected <?> printEvalResult
+    { actual: show actual
+    , expected: show expected
+    , args: [ show x1, show x2 ]
+    }
   where
-  ret = f x1 x2
+  actual = f x1 x2
 
 shouldEvalTo1
   :: forall a z
@@ -611,11 +622,29 @@ shouldEvalTo1
   => Show a
   => Show z
   => (FnWithArgs1 a z -> z -> Result)
-shouldEvalTo1 (FnWithArgs1 f x1) exp =
-  ret == exp <?> show
-    { x1, ret, exp }
+shouldEvalTo1 (FnWithArgs1 f x1) expected =
+  actual == expected <?> printEvalResult
+    { actual: show actual
+    , expected: show expected
+    , args: [ show x1 ]
+    }
   where
-  ret = f x1
+  actual = f x1
+
+type EvalResult =
+  { args :: Array String
+  , expected :: String
+  , actual :: String
+  }
+
+printEvalResult :: EvalResult -> String
+printEvalResult result = "\n" <> Str.joinWith "\n"
+  (args <> [ actual ] <> [ expected ])
+  where
+  args = mapWithIndex mkArg result.args
+  mkArg n x = "Input " <> show (n + 1) <> ": " <> x
+  actual = "Actual: " <> result.actual
+  expected = "Expected: " <> result.expected
 
 --------------------------------------------------------------------------------
 --- Gen
@@ -624,11 +653,24 @@ shouldEvalTo1 (FnWithArgs1 f x1) exp =
 maxInt :: Int
 maxInt = 10
 
+genDifferent :: forall a. Eq a => Gen a -> Gen (Tuple a a)
+genDifferent gen = do
+  x <- gen
+  y <- gen <#> maybeBool (_ /= x) # filtered
+  pure $ Tuple x y
+
 genValid2dArray :: Valid Size -> Gen (Valid Array2d)
 genValid2dArray (Valid (Size (Vec width height))) =
   (pure width >>= genLine)
     # vectorOf height
     <#> Array2d >>> Valid
+
+genValidEntries :: Valid Size -> Gen (Valid Entries)
+genValidEntries (Valid (Size (Vec width height))) =
+  pure $ Valid $ Entries ado
+    x <- Arr.dropEnd 1 $ Arr.range 0 width
+    y <- Arr.dropEnd 1 $ Arr.range 0 height
+    in Tuple (Pos (Vec x y)) 0
 
 allSameLength :: forall a. Array (Array a) -> Boolean
 allSameLength xs =
@@ -740,14 +782,20 @@ instance Arbitrary (Invalid Array2d) where
       pure
         (Invalid $ Array2d entries)
 
-instance Arbitrary (Invalid (Tuple Size Array2d)) where
+instance Arbitrary (Invalid (Tuple (Valid Size) (Valid Array2d))) where
   arbitrary = do
-    validSize@(Valid size) <- arbitrary
+    Tuple size otherSize <- genDifferent arbitrary
 
-    Valid xs <- arbitrary
-      <#> maybeBool (_ /= validSize)
-      # filtered
-      >>= genValid2dArray
+    xs <- genValid2dArray otherSize
+
+    pure
+      (Invalid $ Tuple size xs)
+
+instance Arbitrary (Invalid (Tuple (Valid Size) (Valid Entries))) where
+  arbitrary = do
+    Tuple size otherSize <- genDifferent arbitrary
+
+    xs <- genValidEntries otherSize
 
     pure
       (Invalid $ Tuple size xs)
@@ -810,15 +858,9 @@ instance Arbitrary (Valid Entries) where
 
 instance Arbitrary (Valid (Tuple Size Entries)) where
   arbitrary = do
-    Valid size@((Size (Vec w h))) <- arbitrary
-    let
-      entries = Entries
-        ( ado
-            x <- Arr.dropEnd 1 $ Arr.range 0 w
-            y <- Arr.dropEnd 1 $ Arr.range 0 h
-            in Tuple (Pos (Vec x y)) 0
-        )
-    pure $ Valid (Tuple size entries)
+    validSize <- arbitrary
+    entries <- genValidEntries validSize
+    pure $ Valid (Tuple (unwrap validSize) (unwrap entries))
 
 --------------------------------------------------------------------------------
 --- Any

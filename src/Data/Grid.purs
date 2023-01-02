@@ -158,7 +158,7 @@ import Prelude
 import Control.Alternative (guard)
 import Data.Array as Arr
 import Data.Bifunctor (lmap)
-import Data.Foldable (class Foldable, and, fold, foldMap, foldl, foldr, traverse_)
+import Data.Foldable (class Foldable, and, fold, foldMap, foldl, foldr, length, traverse_)
 import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndexDefaultL, foldlWithIndex, foldrWithIndex)
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
 import Data.Generic.Rep (class Generic)
@@ -462,8 +462,15 @@ fromFoldable givenSize xs = do
   pure $ UnsafeGrid givenSize newMap
   where
   newMap = Map.fromFoldable xs
-  checkPositions size' = positionsFromSize size'
-    # traverse_ (\pos -> void $ Map.lookup pos newMap)
+
+  checkPositions size' =
+    let
+      positions' = positionsFromSize size'
+    in
+      do
+        guard (Arr.length positions' == length xs)
+        positions'
+          # traverse_ (\pos -> void $ Map.lookup pos newMap)
 
 -- TODO: fromArray :: forall a. Size -> Array a -> Maybe (Grid a)
 -- TODO: fromArrayConform :: forall a. Int -> Array a -> Grid a
