@@ -2,8 +2,8 @@
 --- Intro
 --------------------------------------------------------------------------------
 
--- | Intro
--- |
+-- | This module provides a type for 2D grids of variable sizes as well as some
+-- | functions for creating and manipulating values of this type. 
 
 --------------------------------------------------------------------------------
 --- TOC
