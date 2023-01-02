@@ -1,6 +1,6 @@
 
 {
-  description = "purescript-marionette";
+  description = "purescript-grid";
 
   inputs.nixpkgs.url = "nixpkgs";
 
