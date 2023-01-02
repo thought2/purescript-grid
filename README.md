@@ -14,7 +14,7 @@ import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
 import Data.Int (round, toNumber)
 import Data.Int as Int
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Newtype as NT
 import Data.Number (abs, acos, asin, floor)
 import Data.Number as Num
@@ -89,12 +89,12 @@ Strings first by mapping over the grid:
 ```
 
 The printer also works if the strings in the cells have different lengths.
-Here we generate a Grid based on the position of each cell by using the `fill` function:
+Here we generate a Grid based on the position of each cell by using the `fillTry` function:
 ```hs
 gridC :: Grid String
-gridC = Grid.fill (Size $ Vec 4 5) fillFn
+gridC = Grid.fillTry (Size $ Vec 4 5) fillTryFn
   where
-  fillFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
+  fillTryFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
 ```
 And print it using the defaults:
 ```text
@@ -128,7 +128,7 @@ And then pass them to `printGrid`:
 
 ```hs
 gridD :: Grid Char
-gridD = Grid.fill (Size $ Vec 8 6) (\_ -> '*')
+gridD = Grid.fillTry (Size $ Vec 8 6) (\_ -> '*')
 ```
 ```text
 > import Data.String.CodeUnits as StrC
@@ -206,7 +206,7 @@ norm (Size vecSize) (Pos vecPos) =
   maxPos = vecSize - one
 
 gridQuarterCircle :: Grid String
-gridQuarterCircle = Grid.fill
+gridQuarterCircle = Grid.fillTry
   size
   (remap >>> drawCircle)
 
@@ -238,6 +238,7 @@ o O O O O O O O O O
 ```hs
 gridHalfCircle :: Grid String
 gridHalfCircle = Grid.mirrorY gridQuarterCircle `Grid.appendX` gridQuarterCircle
+  # fromMaybe Grid.empty
 ```
 ```text
 > log $ Grid.printGrid_ $ gridHalfCircle
@@ -253,6 +254,7 @@ O O O O O O O O O o o O O O O O O O O O
 ```hs
 gridFullCircle :: Grid String
 gridFullCircle = Grid.mirrorX gridHalfCircle `Grid.appendY` gridHalfCircle
+  # fromMaybe Grid.empty
 ```
 ```text
 > log $ Grid.printGrid_ $ gridFullCircle 

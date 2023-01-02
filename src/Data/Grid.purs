@@ -632,6 +632,8 @@ rotateClockwise grid@(UnsafeGrid oldSize _) =
 -- TODO: bindWithIndex :: forall a b. Grid a -> (Pos -> a -> Grid b) -> Grid b
 -- TODO: join :: forall a b. Grid (Grid a) -> Grid a
 
+-- TODO: docs
+-- TODO: test
 mirrorX :: forall a. Grid a -> Grid a
 mirrorX grid = UnsafeGrid gridSize newMap
   where
@@ -664,9 +666,12 @@ mirrorY grid = UnsafeGrid gridSize newMap
 
 -- TODO: docs
 -- TODO: test
--- TODO: handle resize
-appendX :: forall a. Grid a -> Grid a -> Grid a
-appendX gridL gridR = UnsafeGrid newSize newMap
+appendX :: forall a. Grid a -> Grid a -> Maybe (Grid a)
+appendX gridL gridR
+  | (Size (Vec _ h1 )) <- size gridL
+  , (Size (Vec _ h2 )) <- size gridR
+  , h1 /= h2 = Nothing
+appendX gridL gridR = Just $ UnsafeGrid newSize newMap
   where
   Size sizeL = size gridL
   Size sizeR = size gridR
@@ -687,9 +692,12 @@ appendX gridL gridR = UnsafeGrid newSize newMap
 
 -- TODO: docs
 -- TODO: test
--- TODO: handle resize
-appendY :: forall a. Grid a -> Grid a -> Grid a
-appendY gridTop gridBot = UnsafeGrid newSize newMap
+appendY :: forall a. Grid a -> Grid a -> Maybe (Grid a)
+appendY gridTop gridBot
+  | (Size (Vec w1 _)) <- size gridTop
+  , (Size (Vec w2 _)) <- size gridBot
+  , w1 /= w2 = Nothing
+appendY gridTop gridBot = Just $ UnsafeGrid newSize newMap
   where
   Size sizeTop = size gridTop
   Size sizeBot = size gridBot

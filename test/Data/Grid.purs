@@ -463,6 +463,27 @@ spec = do
                 , [ "1-2", "1-1", "1-0" ]
                 ]
 
+      describe "appendX" do
+        it "right appends the seconds grid (2) to the first grid (1) in case their heights match" do
+          ( G.appendX
+              ( G.fromArraysConform
+                  [ [ "A00", "A10" ]
+                  , [ "A01", "A11" ]
+                  ]
+              )
+              ( G.fromArraysConform
+                  [ [ "B00", "B10", "B20" ]
+                  , [ "B01", "B11", "B21" ]
+                  ]
+              )
+          )
+            `shouldEqual`
+              ( Just $ G.fromArraysConform
+                  [ [ "A00", "A10", "B00", "B10", "B20" ]
+                  , [ "A01", "A11", "B01", "B11", "B21" ]
+                  ]
+              )
+
     describe "SubGrid Modifiers" do
       describe "setSubGrid" do
         it "works for a simple example" do

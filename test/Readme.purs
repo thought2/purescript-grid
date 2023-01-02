@@ -14,7 +14,7 @@ import Data.Grid (Grid, Size(..), Vec(..), Pos(..))
 import Data.Grid as Grid
 import Data.Int (round, toNumber)
 import Data.Int as Int
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe, fromMaybe)
 import Data.Newtype as NT
 import Data.Number (abs, acos, asin, floor)
 import Data.Number as Num
@@ -237,6 +237,7 @@ gridQuarterCircle = Grid.fillTry
 
 gridHalfCircle :: Grid String
 gridHalfCircle = Grid.mirrorY gridQuarterCircle `Grid.appendX` gridQuarterCircle
+  # fromMaybe Grid.empty
 
 -- ```text
 -- > log $ Grid.printGrid_ $ gridHalfCircle
@@ -252,6 +253,7 @@ gridHalfCircle = Grid.mirrorY gridQuarterCircle `Grid.appendX` gridQuarterCircle
 
 gridFullCircle :: Grid String
 gridFullCircle = Grid.mirrorX gridHalfCircle `Grid.appendY` gridHalfCircle
+  # fromMaybe Grid.empty
 
 -- ```text
 -- > log $ Grid.printGrid_ $ gridFullCircle 
