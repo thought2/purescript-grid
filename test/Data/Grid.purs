@@ -1,7 +1,3 @@
---------------------------------------------------------------------------------
---- Exports
---------------------------------------------------------------------------------
-
 module Test.Data.Grid
   ( Any(..)
   , Array2d(..)
@@ -11,10 +7,6 @@ module Test.Data.Grid
   , genPosInt0
   , spec
   ) where
-
---------------------------------------------------------------------------------
---- Imports
---------------------------------------------------------------------------------
 
 import Prelude
 
@@ -618,13 +610,6 @@ runPartial p = pure unit >>= \_ -> pure $ unsafePartial $ p unit
 --------------------------------------------------------------------------------
 --- FnWithArgs
 --------------------------------------------------------------------------------
-
-f2 :: forall a b c. Show a => Show b => (a -> b -> c) -> a -> b -> ValFrom c
-f2 f x y = ValFrom [ show x, show y ] (f x y)
-
-data ValFrom a = ValFrom (Array String) a
-
--- shouldEqual' :: ValFrom a -> a -> Result
 
 data FnWithArgs3 a b c z = F3 (a -> b -> c -> z) a b c
 
