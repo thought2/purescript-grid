@@ -41,7 +41,6 @@ import Test.Spec (Spec, describe, it)
 import Test.Spec.Assertions (expectError, shouldEqual)
 import Test.Spec.QuickCheck (quickCheck)
 import Type.Proxy (Proxy(..))
-import Unsafe.Coerce (unsafeCoerce)
 
 --------------------------------------------------------------------------------
 --- Tests

@@ -30,8 +30,8 @@
 -- |   - fromArrayAsRow
 -- |   - fromArrayAsColumn
 
--- |   - [genGridTry](#v:genGridTry)
 -- |   - [genGrid](#v:genGrid)
+-- |   - [genGridTry](#v:genGridTry)
 -- |
 -- | - Destructors
 -- |   - [toArrays](#v:toArrays)
@@ -109,6 +109,8 @@ module Data.Grid
   , fromArraysPartial
   , mkGrid
   , fromFoldable
+  , genGrid
+  , genGridTry
 
   -- Destructors
   , toArrays
@@ -291,7 +293,6 @@ instance TraversableWithIndex Pos Grid where
   traverseWithIndex f (UnsafeGrid oldSize oldMap) =
     UnsafeGrid oldSize <$> (traverseWithIndex f oldMap)
 
--- | TODO: doc
 instance Arbitrary a => Arbitrary (Grid a) where
   arbitrary = Gen.sized $ \n -> do
     width <- Gen.chooseInt 0 n
@@ -488,13 +489,15 @@ fromFoldable givenSize xs = do
 -- TODO: fromArrayAsRow :: forall a. Array a -> Grid a
 -- TODO: fromArrayAsColumn :: forall a. Array a -> Grid a
 
--- | TODO: doc, test
+-- TODO: docs
+-- TODO: test
 genGridTry :: forall a. Size -> (Pos -> Gen a) -> Gen (Grid a)
 genGridTry givenSize mkGen = case genGrid givenSize mkGen of
-  Just genGrid -> genGrid
+  Just genGrid' -> genGrid'
   Nothing -> pure empty
 
--- | TODO: doc, test
+-- TODO: docs
+-- TODO: test
 genGrid :: forall a. Size -> (Pos -> Gen a) -> Maybe (Gen (Grid a))
 genGrid givenSize mkGen = do
   guard $ sizeIsValid givenSize
@@ -685,7 +688,6 @@ appendX gridL gridR = UnsafeGrid newSize newMap
 -- TODO: docs
 -- TODO: test
 -- TODO: handle resize
-
 appendY :: forall a. Grid a -> Grid a -> Grid a
 appendY gridTop gridBot = UnsafeGrid newSize newMap
   where
@@ -706,6 +708,9 @@ appendY gridTop gridBot = UnsafeGrid newSize newMap
     # gridGetMap
     # Map.union mapBot
 
+-- TODO: docs
+-- TODO: test
+-- TODO: export
 resize :: forall a. Size -> Grid a -> Maybe (Grid a)
 resize unsafeSize (UnsafeGrid (Size oldSize) _)
   | (Size givenSize) <- sizeNormalize unsafeSize
