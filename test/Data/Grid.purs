@@ -24,7 +24,7 @@ import Data.Array as Arr
 import Data.Array.NonEmpty as NEA
 import Data.Filterable (maybeBool)
 import Data.Generic.Rep (class Generic)
-import Data.Grid (Pos(..), Size(..), Vec(..))
+import Data.Grid (Grid, Pos(..), Size(..), Vec(..))
 import Data.Grid as G
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype, un, unwrap)
@@ -340,6 +340,13 @@ spec = do
               , [ "0-2", "1-2" ]
               ]
 
+        it "converts any given grid to arrays" do
+          quickCheck \(grid :: Grid Int) ->
+            ( FnWithArgs1 G.toArrays grid
+                <#> G.fromArraysConform
+            )
+              `shouldEvalTo1` grid
+
       describe "toUnfoldable" do
         it "works for a simple example" do
           ( G.toUnfoldable $
@@ -358,6 +365,13 @@ spec = do
               , (Pos $ Vec 1 2) /\ "1-2"
               ]
 
+        it "converts any given grid to an unfoldable" do
+          quickCheck \(grid :: Grid Int) ->
+            ( FnWithArgs1 (G.toUnfoldable :: _ -> Array _) grid
+                <#> G.fromFoldable (G.size grid)
+            )
+              `shouldEvalTo1` (Just grid)
+
       describe "size" do
         it "works for a simple example" do
           ( G.size $
@@ -370,6 +384,13 @@ spec = do
             `shouldEqual`
               (Size $ Vec 2 3)
 
+        it "gets the size of any grid" do
+          quickCheck \(grid :: Grid Unit) ->
+            ( FnWithArgs1 G.size grid
+                <#> (\s -> G.fill s (const unit))
+            )
+              `shouldEvalTo1` (Just grid)
+
       describe "findEntry" do
         it "works for a simple example" do
           ( G.findEntry (\_ v -> v == "1-1") $
@@ -381,6 +402,17 @@ spec = do
           )
             `shouldEqual`
               (Just $ (Pos $ Vec 1 1) /\ "1-1")
+
+        it "finds an entry in any nonempty grid" do
+          quickCheck \(grid :: Grid Unit) ->
+            ( FnWithArgs1 (G.findEntry (\_ x -> x == unit)) grid
+            )
+              `shouldEvalTo1`
+                ( if G.size grid == Size (Vec 0 0) then
+                    Nothing
+                  else
+                    (Just (Tuple (Pos $ Vec 0 0) unit))
+                )
 
       describe "getCell" do
         it "works for a simple example" do
@@ -587,6 +619,13 @@ runPartial p = pure unit >>= \_ -> pure $ unsafePartial $ p unit
 --------------------------------------------------------------------------------
 --- FnWithArgs
 --------------------------------------------------------------------------------
+
+f2 :: forall a b c. Show a => Show b => (a -> b -> c) -> a -> b -> ValFrom c
+f2 f x y = ValFrom [ show x, show y ] (f x y)
+
+data ValFrom a = ValFrom (Array String) a
+
+-- shouldEqual' :: ValFrom a -> a -> Result
 
 data FnWithArgs3 a b c z = F3 (a -> b -> c -> z) a b c
 

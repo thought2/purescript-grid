@@ -30,8 +30,8 @@
 -- |   - fromArrayAsRow
 -- |   - fromArrayAsColumn
 
--- |   - genGrid
--- |   - genGridSized
+-- |   - [genGridTry](#v:genGridTry)
+-- |   - [genGrid](#v:genGrid)
 -- |
 -- | - Destructors
 -- |   - [toArrays](#v:toArrays)
@@ -156,6 +156,7 @@ module Data.Grid
 import Prelude
 
 import Control.Alternative (guard)
+import Control.Monad.Gen as Gen
 import Data.Array as Arr
 import Data.Bifunctor (lmap)
 import Data.Foldable (class Foldable, and, fold, foldMap, foldl, foldr, length, traverse_)
@@ -180,6 +181,8 @@ import Data.Vector2 (Vec(..), oneX, oneY, vmod)
 import Data.Vector2 as V2
 import Data.Vector2 as Vec
 import Partial.Unsafe (unsafeCrashWith, unsafePartial)
+import Test.QuickCheck (class Arbitrary, arbitrary)
+import Test.QuickCheck.Gen (Gen)
 
 --------------------------------------------------------------------------------
 --- Types
@@ -287,6 +290,14 @@ instance Traversable Grid where
 instance TraversableWithIndex Pos Grid where
   traverseWithIndex f (UnsafeGrid oldSize oldMap) =
     UnsafeGrid oldSize <$> (traverseWithIndex f oldMap)
+
+-- | TODO: doc
+instance Arbitrary a => Arbitrary (Grid a) where
+  arbitrary = Gen.sized $ \n -> do
+    width <- Gen.chooseInt 0 n
+    height <- Gen.chooseInt 0 n
+    let gridSize = sizeNormalize $ Size $ Vec width height
+    genGridTry gridSize (const arbitrary)
 
 -- | Position in a 2D Plane
 
@@ -476,8 +487,24 @@ fromFoldable givenSize xs = do
 -- TODO: fromArrayConform :: forall a. Int -> Array a -> Grid a
 -- TODO: fromArrayAsRow :: forall a. Array a -> Grid a
 -- TODO: fromArrayAsColumn :: forall a. Array a -> Grid a
--- TODO: genGrid :: forall a. Gen (Grid a)
--- TODO: genGridSized :: forall a. Size -> Gen (Grid a)
+
+-- | TODO: doc, test
+genGridTry :: forall a. Size -> (Pos -> Gen a) -> Gen (Grid a)
+genGridTry givenSize mkGen = case genGrid givenSize mkGen of
+  Just genGrid -> genGrid
+  Nothing -> pure empty
+
+-- | TODO: doc, test
+genGrid :: forall a. Size -> (Pos -> Gen a) -> Maybe (Gen (Grid a))
+genGrid givenSize mkGen = do
+  guard $ sizeIsValid givenSize
+  pure
+    ( ado
+        newMap <- positionsFromSize givenSize
+          # traverse (\pos -> Tuple <$> pure pos <*> mkGen pos)
+          <#> Map.fromFoldable
+        in UnsafeGrid givenSize newMap
+    )
 
 --------------------------------------------------------------------------------
 --- Destructors
