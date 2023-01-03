@@ -4,8 +4,7 @@
 /output/
 /output-es/
 
-/generated-docs/*
-!/generated-docs/md/
+/generated-docs/
 
 /.psc-package/
 /.psc*
