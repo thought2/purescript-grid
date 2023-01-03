@@ -246,8 +246,8 @@ gridI = Grid.setSubGridModulo (Pos $ Vec 5 2) gridF gridD
 -- * * * * * * * *
 -- * * * * * * * *
 -- ```
-
--- <!-- TODO Document section below -->
+--
+-- <!-- TODO Document section below
 
 norm :: Size -> Pos -> Vec Number
 norm (Size vecSize) (Pos vecPos) =
@@ -325,5 +325,5 @@ gridFullCircle = Grid.mirrorX gridHalfCircle `Grid.appendY` gridHalfCircle
 -- O O O O O o . . . . . . . . o O O O O O
 -- O O O O O O O O O o o O O O O O O O O O
 -- ```
-
+-- -->
 -- [API Docs]: https://pursuit.purescript.org/packages/purescript-grid

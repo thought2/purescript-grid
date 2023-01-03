@@ -247,10 +247,8 @@ L D * * * W O R
 * * * * * * * *
 * * * * * * * *
 ```
-```hs
 
-```
-<!-- TODO Document section below -->
+<!-- TODO Document section below
 ```hs
 norm :: Size -> Pos -> Vec Number
 norm (Size vecSize) (Pos vecPos) =
@@ -328,7 +326,5 @@ O O O o . . . . . . . . . . . . o O O O
 O O O O O o . . . . . . . . o O O O O O
 O O O O O O O O O o o O O O O O O O O O
 ```
-```hs
-
-```
+-->
 [API Docs]: https://pursuit.purescript.org/packages/purescript-grid
