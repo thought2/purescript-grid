@@ -1,5 +1,49 @@
 -- # purescript-grid
 --
+-- ## Install
+--
+-- Until the package is published on Pursuit, add this to the end of your `packages.dhall`:
+-- 
+-- ```text
+-- with grid =
+--     { dependencies =
+--     [ "aff"
+--     , "arrays"
+--     , "bifunctors"
+--     , "console"
+--     , "control"
+--     , "effect"
+--     , "filterable"
+--     , "foldable-traversable"
+--     , "gen"
+--     , "integers"
+--     , "lists"
+--     , "maybe"
+--     , "newtype"
+--     , "numbers"
+--     , "ordered-collections"
+--     , "partial"
+--     , "prelude"
+--     , "quickcheck"
+--     , "spec"
+--     , "spec-quickcheck"
+--     , "strings"
+--     , "tuples"
+--     , "unfoldable"
+--     , "unsafe-coerce"
+--     , "vectors"
+--     ]
+--     , repo =
+--         "https://github.com/thought2/purescript-grid.git"
+--     , version =
+--         "main"
+--     }
+--  ```
+-- 
+-- Then run:
+--
+-- `spago install grid`
+-- 
 -- ## API Docs
 -- Until the package is published on Pursuit, use the Markdown docs:
 -- 
@@ -202,6 +246,8 @@ gridI = Grid.setSubGridModulo (Pos $ Vec 5 2) gridF gridD
 -- * * * * * * * *
 -- * * * * * * * *
 -- ```
+
+-- <!-- TODO Document section below -->
 
 norm :: Size -> Pos -> Vec Number
 norm (Size vecSize) (Pos vecPos) =
