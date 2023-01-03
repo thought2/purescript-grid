@@ -89,12 +89,12 @@ spec = do
 
         it "fails when an invalid size (1) was given" do
           quickCheck \(Invalid size) ->
-            FnWithArgs1 (\x -> G.fill x (const 0)) size
+            f1 (\x -> G.fill x (const 0)) size
               `shouldEvalTo1` Nothing
 
         it "returns a grid of the size (1) that was given" do
           quickCheck \(Valid size) ->
-            ( FnWithArgs1 (\x -> G.fill x (const 0)) size
+            ( f1 (\x -> G.fill x (const 0)) size
                 <#> map G.size
             )
               `shouldEvalTo1` Just size
@@ -103,7 +103,7 @@ spec = do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           quickCheck \(Valid size) ->
-            ( FnWithArgs1 (\x -> G.fill x fillFn) size
+            ( f1 (\x -> G.fill x fillFn) size
                 <#> map
                   ( (G.toUnfoldable :: _ -> Array _)
                       >>> map (\(Tuple k v) -> fillFn k == v)
@@ -126,7 +126,7 @@ spec = do
 
         it "returns an empty grid for a given invalid size (1)" do
           quickCheck \(Invalid size) ->
-            FnWithArgs1 (\x -> G.fillTry x (const 0)) size
+            f1 (\x -> G.fillTry x (const 0)) size
               `shouldEvalTo1`
                 G.fromArraysConform []
 
@@ -134,7 +134,7 @@ spec = do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           quickCheck \(Valid size) ->
-            ( FnWithArgs1 (\x -> G.fillTry x fillFn) size
+            ( f1 (\x -> G.fillTry x fillFn) size
                 <#>
                   ( (G.toUnfoldable :: _ -> Array _)
                       >>> map (\(Tuple k v) -> fillFn k == v)
@@ -163,22 +163,22 @@ spec = do
 
         it "fails when given an invalid size (1) and any arrays (2)" do
           quickCheck \(Invalid size) (Any (Array2d xs)) ->
-            FnWithArgs2 G.fromArrays size xs
+            f2 G.fromArrays size xs
               `shouldEvalTo2` Nothing
 
         it "fails when given invalid arrays (2) and any size (1)" do
           quickCheck \(Any size) (Invalid (Array2d xs)) ->
-            FnWithArgs2 G.fromArrays size xs
+            f2 G.fromArrays size xs
               `shouldEvalTo2` Nothing
 
         it "fails when given an invalid pair of size (1) and arrays (2)" do
           quickCheck \(Invalid (Tuple (Valid size) (Valid (Array2d xs)))) ->
-            FnWithArgs2 G.fromArrays size xs
+            f2 G.fromArrays size xs
               `shouldEvalTo2` Nothing
 
         it "returns a grid of the given a valid combination of size (1) arrays (2)" do
           quickCheck \(Valid (Tuple size (Array2d xs))) ->
-            FnWithArgs2 (\x1 x2 -> G.size <$> G.fromArrays x1 x2) size xs
+            f2 (\x1 x2 -> G.size <$> G.fromArrays x1 x2) size xs
               `shouldEvalTo2` Just size
 
       describe "fromArraysConform" do
@@ -212,7 +212,7 @@ spec = do
 
         it "returns an adjusted grid when invalid arrays (1) are given" do
           quickCheck \(Invalid (Array2d xs)) ->
-            FnWithArgs1 (G.fromArraysConform >>> G.size) xs
+            f1 (G.fromArraysConform >>> G.size) xs
               `shouldEvalTo1`
                 ( let
                     w = xs <#> Arr.length # minimum # fromMaybe 0
@@ -223,7 +223,7 @@ spec = do
 
         it "returns an grid equivalent to the given arrays (1)" do
           quickCheck \(Valid (Array2d xs)) ->
-            ( FnWithArgs1 G.fromArraysConform xs
+            ( f1 G.fromArraysConform xs
                 <#> G.toArrays
             )
               `shouldEvalTo1` xs
@@ -293,24 +293,24 @@ spec = do
 
         it "fails when an invalid size (1) and any entries (2) are given" do
           quickCheck \(Invalid size) (Any (Entries xs)) ->
-            FnWithArgs2 G.fromFoldable size xs
+            f2 G.fromFoldable size xs
               `shouldEvalTo2` Nothing
 
         it "fails when any size (1) and invalid entries (2) are given" do
           quickCheck \(Any size) (Invalid (Entries xs)) ->
-            FnWithArgs2 G.fromFoldable size xs
+            f2 G.fromFoldable size xs
               `shouldEvalTo2` Nothing
 
         it "returns a grid when an invalid combination of size (1) and entries (2) are given" do
           quickCheck \(Invalid (Tuple (Valid size) (Valid (Entries xs)))) ->
-            ( FnWithArgs2 G.fromFoldable size xs
+            ( f2 G.fromFoldable size xs
                 <#> map G.size
             )
               `shouldEvalTo2` Nothing
 
         it "returns a grid when a valid combination of size (1) and entries (2) are given" do
           quickCheck \(Valid (Tuple size (Entries xs))) ->
-            ( FnWithArgs2 G.fromFoldable size xs
+            ( f2 G.fromFoldable size xs
                 <#> map G.size
             )
               `shouldEvalTo2` Just size
@@ -333,7 +333,7 @@ spec = do
 
         it "converts any given grid to arrays" do
           quickCheck \(grid :: Grid Int) ->
-            ( FnWithArgs1 G.toArrays grid
+            ( f1 G.toArrays grid
                 <#> G.fromArraysConform
             )
               `shouldEvalTo1` grid
@@ -358,7 +358,7 @@ spec = do
 
         it "converts any given grid to an unfoldable" do
           quickCheck \(grid :: Grid Int) ->
-            ( FnWithArgs1 (G.toUnfoldable :: _ -> Array _) grid
+            ( f1 (G.toUnfoldable :: _ -> Array _) grid
                 <#> G.fromFoldable (G.size grid)
             )
               `shouldEvalTo1` (Just grid)
@@ -377,7 +377,7 @@ spec = do
 
         it "gets the size of any grid" do
           quickCheck \(grid :: Grid Unit) ->
-            ( FnWithArgs1 G.size grid
+            ( f1 G.size grid
                 <#> (\s -> G.fill s (const unit))
             )
               `shouldEvalTo1` (Just grid)
@@ -396,7 +396,7 @@ spec = do
 
         it "finds an entry in any nonempty grid" do
           quickCheck \(grid :: Grid Unit) ->
-            ( FnWithArgs1 (G.findEntry (\_ x -> x == unit)) grid
+            ( f1 (G.findEntry (\_ x -> x == unit)) grid
             )
               `shouldEvalTo1`
                 ( if G.size grid == Size (Vec 0 0) then
@@ -417,6 +417,8 @@ spec = do
             `shouldEqual`
               Just "1-2"
 
+      -- TODO Add fuzzy test
+
       describe "getCellModulo" do
         it "works for a simple example" do
           ( G.getCellModulo (Pos $ Vec 2 3) $
@@ -428,6 +430,8 @@ spec = do
           )
             `shouldEqual`
               "0-0"
+
+      -- TODO Add fuzzy test
 
       describe "positions" do
         it "works for a simple example" do
@@ -447,6 +451,8 @@ spec = do
               , Pos $ Vec 1 2
               ]
 
+    -- TODO Add fuzzy test
+
     describe "Grid Modifiers" do
       describe "rotateClockwise" do
         it "works for a simple example" do
@@ -462,6 +468,8 @@ spec = do
                 [ [ "0-2", "0-1", "0-0" ]
                 , [ "1-2", "1-1", "1-0" ]
                 ]
+
+      -- TODO Add fuzzy test
 
       describe "appendX" do
         it "right appends the seconds grid (2) to the first grid (1) in case their heights match" do
@@ -483,6 +491,8 @@ spec = do
                   , [ "A01", "A11", "B01", "B11", "B21" ]
                   ]
               )
+
+    -- TODO Add fuzzy test
 
     describe "SubGrid Modifiers" do
       describe "setSubGrid" do
@@ -507,6 +517,8 @@ spec = do
                   ]
               )
 
+      -- TODO Add fuzzy test
+
       describe "setSubGridClip" do
         it "works for a simple example" do
           G.setSubGridClip (Pos $ Vec 2 1)
@@ -528,6 +540,8 @@ spec = do
                 , [ "0-2", "1-2", "CCC" ]
                 ]
 
+    -- TODO Add fuzzy test
+
     describe "Cell Modifiers" do
       describe "setCell" do
         it "works for a simple example" do
@@ -546,6 +560,8 @@ spec = do
                   ]
               )
 
+      -- TODO Add fuzzy test
+
       describe "setCellTry" do
         it "works for a simple example" do
           ( G.setCellTry (Pos $ Vec 1 1) "ABC" $
@@ -561,6 +577,8 @@ spec = do
                 , [ "0-1", "ABC" ]
                 , [ "0-2", "1-2" ]
                 ]
+
+    -- TODO Add fuzzy test
 
     describe "Pretty Printing" do
       describe "CellFormatter" do
@@ -586,6 +604,8 @@ spec = do
                   ]
               )
 
+      -- TODO Add fuzzy test
+
       describe "printGrid" do
         it "works for a simple example" do
           ( G.printGrid
@@ -610,17 +630,23 @@ spec = do
                   ]
               )
 
+      -- TODO Add fuzzy test
+
       describe "padRight" do
         it "works for a simple example" do
           do
             (unwrap $ G.padRight '.') 10 "Hello"
             `shouldEqual` "Hello....."
 
+      -- TODO Add fuzzy test
+
       describe "padLeft" do
         it "works for a simple example" do
           do
             (unwrap $ G.padLeft '.') 10 "Hello"
             `shouldEqual` ".....Hello"
+
+-- TODO Add fuzzy test
 
 --------------------------------------------------------------------------------
 --- Util
@@ -632,7 +658,16 @@ runPartial p = pure unit >>= \_ -> pure $ unsafePartial $ p unit
 --- FnWithArgs
 --------------------------------------------------------------------------------
 
-data FnWithArgs3 a b c z = F3 (a -> b -> c -> z) a b c
+f1 :: forall a z. (a -> z) -> a -> FnWithArgs1 a z
+f1 = FnWithArgs1
+
+f2 :: forall a b z. (a -> b -> z) -> a -> b -> FnWithArgs2 a b z
+f2 = FnWithArgs2
+
+f3 :: forall a b c z. (a -> b -> c -> z) -> a -> b -> c -> FnWithArgs3 a b c z
+f3 = FnWithArgs3
+
+data FnWithArgs3 a b c z = FnWithArgs3 (a -> b -> c -> z) a b c
 
 derive instance Functor (FnWithArgs3 a b c)
 

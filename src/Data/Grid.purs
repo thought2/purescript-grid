@@ -484,20 +484,20 @@ fromFoldable givenSize xs = do
         positions'
           # traverse_ (\pos -> void $ Map.lookup pos newMap)
 
--- TODO: fromArray :: forall a. Size -> Array a -> Maybe (Grid a)
--- TODO: fromArrayConform :: forall a. Int -> Array a -> Grid a
--- TODO: fromArrayAsRow :: forall a. Array a -> Grid a
--- TODO: fromArrayAsColumn :: forall a. Array a -> Grid a
+-- TODO add: fromArray :: forall a. Size -> Array a -> Maybe (Grid a)
+-- TODO add: fromArrayConform :: forall a. Int -> Array a -> Grid a
+-- TODO add: fromArrayAsRow :: forall a. Array a -> Grid a
+-- TODO add: fromArrayAsColumn :: forall a. Array a -> Grid a
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 genGridTry :: forall a. Size -> (Pos -> Gen a) -> Gen (Grid a)
 genGridTry givenSize mkGen = case genGrid givenSize mkGen of
   Just genGrid' -> genGrid'
   Nothing -> pure empty
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 genGrid :: forall a. Size -> (Pos -> Gen a) -> Maybe (Gen (Grid a))
 genGrid givenSize mkGen = do
   guard $ sizeIsValid givenSize
@@ -591,9 +591,9 @@ getCellModulo (Pos pos) grid = unsafePartial
 positions :: forall a. Grid a -> Array Pos
 positions = gridGetSize >>> positionsFromSize
 
--- TODO: getSubGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
--- TODO: getSubGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
--- TODO: getSubGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
+-- TODO add: getSubGrid :: forall a. Pos -> Size -> Grid a -> Maybe (Grid a)
+-- TODO add: getSubGridModulo :: forall a. Pos -> Size -> Grid a -> Grid a
+-- TODO add: getSubGridClip :: forall a. Pos -> Size -> Grid a -> Grid a
 
 --------------------------------------------------------------------------------
 --- Grid Modifiers
@@ -622,18 +622,18 @@ rotateClockwise grid@(UnsafeGrid oldSize _) =
     (Pos $ Vec (maxY - y) x)
     (unsafePartial $ gridUnsafeLookup "rotate" pos grid)
 
--- TODO: zipApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
--- TODO: zip :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
--- TODO: zipWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
--- TODO: explodeApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
--- TODO: explode :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
--- TODO: explodeWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
--- TODO: bind :: forall a b. Grid a -> (a -> Grid b) -> Grid b
--- TODO: bindWithIndex :: forall a b. Grid a -> (Pos -> a -> Grid b) -> Grid b
--- TODO: join :: forall a b. Grid (Grid a) -> Grid a
+-- TODO add: zipApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
+-- TODO add: zip :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO add: zipWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO add: explodeApply :: forall a b. Grid (a -> b) -> Grid a -> Grid b
+-- TODO add: explode :: forall a b. (a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO add: explodeWithIndex :: forall a b. (Pos -> a -> b -> c) -> Grid a -> Grid b -> Grid c
+-- TODO add: bind :: forall a b. Grid a -> (a -> Grid b) -> Grid b
+-- TODO add: bindWithIndex :: forall a b. Grid a -> (Pos -> a -> Grid b) -> Grid b
+-- TODO add: join :: forall a b. Grid (Grid a) -> Grid a
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 mirrorX :: forall a. Grid a -> Grid a
 mirrorX grid = UnsafeGrid gridSize newMap
   where
@@ -648,8 +648,8 @@ mirrorX grid = UnsafeGrid gridSize newMap
 
   maxY = height - 1
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 mirrorY :: forall a. Grid a -> Grid a
 mirrorY grid = UnsafeGrid gridSize newMap
   where
@@ -664,8 +664,8 @@ mirrorY grid = UnsafeGrid gridSize newMap
 
   maxX = width - 1
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 appendX :: forall a. Grid a -> Grid a -> Maybe (Grid a)
 appendX gridL gridR
   | (Size (Vec _ h1 )) <- size gridL
@@ -690,8 +690,8 @@ appendX gridL gridR = Just $ UnsafeGrid newSize newMap
     # gridGetMap
     # Map.union mapRight
 
--- TODO: docs
--- TODO: test
+-- TODO add docs
+-- TODO add test
 appendY :: forall a. Grid a -> Grid a -> Maybe (Grid a)
 appendY gridTop gridBot
   | (Size (Vec w1 _)) <- size gridTop
@@ -716,9 +716,9 @@ appendY gridTop gridBot = Just $ UnsafeGrid newSize newMap
     # gridGetMap
     # Map.union mapBot
 
--- TODO: docs
--- TODO: test
--- TODO: export
+-- TODO add docs
+-- TODO add test
+-- TODO export
 resize :: forall a. Size -> Grid a -> Maybe (Grid a)
 resize unsafeSize (UnsafeGrid (Size oldSize) _)
   | (Size givenSize) <- sizeNormalize unsafeSize
@@ -737,8 +737,8 @@ resize unsafeSize (UnsafeGrid _ gridMap) = Just $ UnsafeGrid newSize newMap
   filterEntry (Tuple (Pos pos) _) =
     and ((<) <$> pos <*> newSize')
 
--- TODO: resizeFit :: forall a. Size -> a -> Grid a -> Grid a
--- TODO: resizeTry :: forall a. Size -> a -> Grid a -> Grid a
+-- TODO add: resizeFit :: forall a. Size -> a -> Grid a -> Grid a
+-- TODO add: resizeTry :: forall a. Size -> a -> Grid a -> Grid a
 
 --------------------------------------------------------------------------------
 --- SubGrid Modifiers
@@ -754,24 +754,24 @@ setSubGridClip vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> fromMaybe grid $ setCell (vec + k) v grid) tgt
 
--- TODO: Test
--- TODO: docs
+-- TODO add test
+-- TODO add docs
 setSubGridTry :: forall a. Pos -> Grid a -> Grid a -> Grid a
 setSubGridTry pos subGrid grid =
   setSubGrid pos subGrid grid # fromMaybe grid
 
--- TODO: test
--- TODO: docs
+-- TODO add test
+-- TODO add docs
 setSubGridModulo :: forall a. Pos -> Grid a -> Grid a -> Grid a
 setSubGridModulo vec src tgt = src
   # (toUnfoldable :: _ -> Array _)
   # foldl (\grid (Tuple k v) -> setCellModulo (vec + k) v grid) tgt
 
--- TODO: modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
--- TODO: setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
--- TODO: modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
--- TODO: modifySubGridClip :: forall a. Pos -> Size -> (a -> a) -> Grid a
--- TODO: modifySubGridTry :: Pos -> Size -> (a -> a) -> Grid a
+-- TODO add: modifySubGrid :: forall a. Pos -> Size -> (a -> a) -> Maybe (Grid a)
+-- TODO add: setSubGridModulo :: forall a. Pos -> Grid a -> Grid a
+-- TODO add: modifySubGridModulo :: forall a. Pos -> Size -> (a -> a) -> Grid a
+-- TODO add: modifySubGridClip :: forall a. Pos -> Size -> (a -> a) -> Grid a
+-- TODO add: modifySubGridTry :: Pos -> Size -> (a -> a) -> Grid a
 
 --------------------------------------------------------------------------------
 --- Cell Modifiers
@@ -799,17 +799,17 @@ setCell _ _ _ = Nothing
 setCellTry :: forall a. Pos -> a -> Grid a -> Grid a
 setCellTry pos x grid = setCell pos x grid # fromMaybe grid
 
--- TODO: Doc
--- TODO: Test
+-- TODO add docs
+-- TODO add test
 setCellModulo :: forall a. Pos -> a -> Grid a -> Grid a
 setCellModulo (Pos pos) x grid = setCellTry newPos x grid
   where
   (Size gridSize) = size grid
   newPos = Pos (mod <$> pos <*> gridSize)
 
--- TODO: modifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Maybe (Grid a) 
--- TODO: modifyCellModulo :: forall a. Pos -> (a -> a) -> Grid a -> Grid a 
--- TODO: modifyCellTry :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
+-- TODO add: modifyCell :: forall a. Pos -> (a -> a) -> Grid a -> Maybe (Grid a) 
+-- TODO add: modifyCellModulo :: forall a. Pos -> (a -> a) -> Grid a -> Grid a 
+-- TODO add: modifyCellTry :: forall a. Pos -> (a -> a) -> Grid a -> Grid a
 
 --------------------------------------------------------------------------------
 --- Pretty Printing
