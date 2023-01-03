@@ -1,5 +1,10 @@
 # purescript-grid
 
+## API Docs
+Until the package is published on Pursuit, use the Markdown docs:
+
+- [Data.Grid](generated-docs/md/Data.Grid.md)
+
 ## Example
 ### Creating Grids
 ```hs
