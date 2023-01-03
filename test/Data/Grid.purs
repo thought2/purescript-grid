@@ -112,11 +112,11 @@ spec = do
             )
               `shouldEvalTo1` Just true
 
-      describe "fillTry" do
+      describe "fillFit" do
         it "succeeds for a valid size (1)" do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
-          G.fillTry (Size $ Vec 2 3) fillFn
+          G.fillFit (Size $ Vec 2 3) fillFn
             `shouldEqual`
               G.fromArraysConform
                 [ [ "0-0", "1-0" ]
@@ -126,7 +126,7 @@ spec = do
 
         it "returns an empty grid for a given invalid size (1)" do
           quickCheck \(Invalid size) ->
-            f1 (\x -> G.fillTry x (const 0)) size
+            f1 (\x -> G.fillFit x (const 0)) size
               `shouldEvalTo1`
                 G.fromArraysConform []
 
@@ -134,7 +134,7 @@ spec = do
           let fillFn (Pos (Vec x y)) = show x <> "-" <> show y
 
           quickCheck \(Valid size) ->
-            ( f1 (\x -> G.fillTry x fillFn) size
+            ( f1 (\x -> G.fillFit x fillFn) size
                 <#>
                   ( (G.toUnfoldable :: _ -> Array _)
                       >>> map (\(Tuple k v) -> fillFn k == v)

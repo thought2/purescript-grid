@@ -89,12 +89,12 @@ Strings first by mapping over the grid:
 ```
 
 The printer also works if the strings in the cells have different lengths.
-Here we generate a Grid based on the position of each cell by using the `fillTry` function:
+Here we generate a Grid based on the position of each cell by using the `fillFit` function:
 ```hs
 gridC :: Grid String
-gridC = Grid.fillTry (Size $ Vec 4 5) fillTryFn
+gridC = Grid.fillFit (Size $ Vec 4 5) fillFitFn
   where
-  fillTryFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
+  fillFitFn (Pos (Vec x y)) = Str.take (x * y + 1) "Abrakadabra"
 ```
 And print it using the defaults:
 ```text
@@ -128,7 +128,7 @@ And then pass them to `printGrid`:
 
 ```hs
 gridD :: Grid Char
-gridD = Grid.fillTry (Size $ Vec 8 6) (\_ -> '*')
+gridD = Grid.fillFit (Size $ Vec 8 6) (\_ -> '*')
 ```
 ```text
 > import Data.String.CodeUnits as StrC
@@ -206,7 +206,7 @@ norm (Size vecSize) (Pos vecPos) =
   maxPos = vecSize - one
 
 gridQuarterCircle :: Grid String
-gridQuarterCircle = Grid.fillTry
+gridQuarterCircle = Grid.fillFit
   size
   (remap >>> drawCircle)
 

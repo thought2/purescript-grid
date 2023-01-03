@@ -18,7 +18,7 @@
 -- |   - [empty](#v:empty)
 -- |   - [singleton](#v:singleton)
 -- |   - [fill](#v:fill)
--- |   - [fillTry](#v:fillTry)
+-- |   - [fillFit](#v:fillFit)
 -- |   - [fromArrays](#v:fromArrays)
 -- |   - [fromArraysConform](#v:fromArraysConform)
 -- |   - [fromArraysPartial](#v:fromArraysPartial)
@@ -31,7 +31,7 @@
 -- |   - fromArrayAsColumn
 
 -- |   - [genGrid](#v:genGrid)
--- |   - [genGridTry](#v:genGridTry)
+-- |   - [genGridFit](#v:genGridFit)
 -- |
 -- | - Destructors
 -- |   - [toArrays](#v:toArrays)
@@ -103,14 +103,14 @@ module Data.Grid
   , empty
   , singleton
   , fill
-  , fillTry
+  , fillFit
   , fromArrays
   , fromArraysConform
   , fromArraysPartial
   , mkGrid
   , fromFoldable
   , genGrid
-  , genGridTry
+  , genGridFit
 
   -- Destructors
   , toArrays
@@ -298,7 +298,7 @@ instance Arbitrary a => Arbitrary (Grid a) where
     width <- Gen.chooseInt 0 n
     height <- Gen.chooseInt 0 n
     let gridSize = sizeNormalize $ Size $ Vec width height
-    genGridTry gridSize (const arbitrary)
+    genGridFit gridSize (const arbitrary)
 
 -- | Position in a 2D Plane
 
@@ -378,12 +378,12 @@ fill givenSize f = ado
 -- |
 -- | ```
 -- | > fn (Pos (Vec x y)) = show x <> "-" <> show y
--- | > fillTry (Size $ Vec 2 2) fn
+-- | > fillFit (Size $ Vec 2 2) fn
 -- | (mkGrid (Size (Vec 2 2)) [["0-0","1-0"],["0-1","1-1"]])
 -- | ```
 
-fillTry :: forall a. Size -> (Pos -> a) -> Grid a
-fillTry unsafeSize f = UnsafeGrid givenSize newMap
+fillFit :: forall a. Size -> (Pos -> a) -> Grid a
+fillFit unsafeSize f = UnsafeGrid givenSize newMap
   where
   givenSize = sizeNormalize unsafeSize
   newMap = positionsFromSize givenSize <#> mkEntry # Map.fromFoldable
@@ -491,8 +491,8 @@ fromFoldable givenSize xs = do
 
 -- TODO add docs
 -- TODO add test
-genGridTry :: forall a. Size -> (Pos -> Gen a) -> Gen (Grid a)
-genGridTry givenSize mkGen = case genGrid givenSize mkGen of
+genGridFit :: forall a. Size -> (Pos -> Gen a) -> Gen (Grid a)
+genGridFit givenSize mkGen = case genGrid givenSize mkGen of
   Just genGrid' -> genGrid'
   Nothing -> pure empty
 
